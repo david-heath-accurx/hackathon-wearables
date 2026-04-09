@@ -1,4 +1,6 @@
 using System.Reflection;
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 using HealthApi.EntityFramework;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -49,6 +51,15 @@ var signingKey = new SymmetricSecurityKey(
     Convert.FromBase64String(builder.Configuration["Auth:SigningKey"]!)
 );
 
+var secretClient = new SecretClient(
+    new Uri(builder.Configuration["KeyVault:Uri"]!),
+    new DefaultAzureCredential()
+);
+var serviceKeySecret = await secretClient.GetSecretAsync("service-signing-key");
+var serviceSigningKey = new SymmetricSecurityKey(
+    Convert.FromBase64String(serviceKeySecret.Value.Value)
+);
+
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -63,9 +74,26 @@ builder.Services
             IssuerSigningKey = signingKey,
             ValidateLifetime = true,
         };
+    })
+    .AddJwtBearer("ServiceKey", options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Auth:ServiceIssuer"],
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Auth:ServiceAudience"],
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = serviceSigningKey,
+            ValidateLifetime = true,
+        };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("ServiceKey", policy =>
+        policy.AddAuthenticationSchemes("ServiceKey").RequireAuthenticatedUser());
+});
 
 var app = builder.Build();
 
