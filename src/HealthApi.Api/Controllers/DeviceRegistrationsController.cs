@@ -33,6 +33,20 @@ public class DeviceRegistrationsController(DeviceRegistrationStorage storage) : 
 
         return Ok();
     }
+
+    [HttpDelete]
+    public async Task<IActionResult> DeregisterAll(
+        [FromQuery] string patientIdentifier,
+        CancellationToken ct
+    )
+    {
+        var deregistered = await storage.DeregisterAllAsync(patientIdentifier, ct);
+
+        if (!deregistered)
+            return NotFound("No registrations found for this patient.");
+
+        return Ok();
+    }
 }
 
 public record RegisterDeviceRequest(string PatientIdentifier, DateOnly DateOfBirth, string DeviceId);

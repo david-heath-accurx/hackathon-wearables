@@ -9,7 +9,7 @@ namespace HealthApi.Api.Controllers;
 [ApiController]
 [Route("health-data")]
 [Authorize]
-public class HealthDataController(HealthDataStorage storage) : ControllerBase
+public class HealthDataController(HealthDataStorage storage, DeviceRegistrationStorage registrations) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> Submit(
@@ -17,11 +17,14 @@ public class HealthDataController(HealthDataStorage storage) : ControllerBase
         CancellationToken ct
     )
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var registration = await registrations.GetByDeviceIdAsync(request.DeviceId, ct);
+
+        if (registration is null)
+            return UnprocessableEntity("Device is not registered.");
 
         var points = request.DataPoints.Select(p => new HealthDataPoint
         {
-            UserId = userId,
+            UserId = registration.PatientIdentifier,
             MetricType = p.MetricType,
             Value = p.Value,
             Unit = p.Unit,
@@ -63,7 +66,7 @@ public class HealthDataController(HealthDataStorage storage) : ControllerBase
 
 public record SubmitHealthDataRequest(
     List<HealthDataPointInput> DataPoints,
-    string? DeviceId,
+    string DeviceId,
     string? DeviceModel
 );
 

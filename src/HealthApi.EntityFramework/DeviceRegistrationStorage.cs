@@ -34,6 +34,32 @@ public class DeviceRegistrationStorage(HealthApiDbContext db)
         );
     }
 
+    public Task<DeviceRegistration?> GetByDeviceIdAsync(string deviceId, CancellationToken ct)
+    {
+        return db.DeviceRegistrations.FirstOrDefaultAsync(r => r.DeviceId == deviceId, ct);
+    }
+
+    public async Task<bool> DeregisterAllAsync(string patientIdentifier, CancellationToken ct)
+    {
+        var deviceIds = await db.DeviceRegistrations
+            .Where(r => r.PatientIdentifier == patientIdentifier)
+            .Select(r => r.DeviceId)
+            .ToListAsync(ct);
+
+        if (deviceIds.Count == 0)
+            return false;
+
+        await db.HealthDataPoints
+            .Where(p => deviceIds.Contains(p.DeviceId!))
+            .ExecuteDeleteAsync(ct);
+
+        await db.DeviceRegistrations
+            .Where(r => r.PatientIdentifier == patientIdentifier)
+            .ExecuteDeleteAsync(ct);
+
+        return true;
+    }
+
     public async Task<bool> DeregisterAsync(string deviceId, CancellationToken ct)
     {
         var registration = await db.DeviceRegistrations
@@ -41,6 +67,10 @@ public class DeviceRegistrationStorage(HealthApiDbContext db)
 
         if (registration is null)
             return false;
+
+        await db.HealthDataPoints
+            .Where(p => p.DeviceId == deviceId)
+            .ExecuteDeleteAsync(ct);
 
         db.DeviceRegistrations.Remove(registration);
         await db.SaveChangesAsync(ct);
