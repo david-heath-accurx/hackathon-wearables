@@ -10,6 +10,7 @@ using Microsoft.OpenApi;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplicationInsightsTelemetry();
+builder.Services.AddHttpClient();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -47,6 +48,7 @@ builder.Services.AddDbContext<HealthApiDbContext>(options =>
 
 builder.Services.AddScoped<HealthDataStorage>();
 builder.Services.AddScoped<DeviceRegistrationStorage>();
+builder.Services.AddScoped<AlertStorage>();
 
 var signingKey = new SymmetricSecurityKey(
     Convert.FromBase64String(builder.Configuration["Auth:SigningKey"]!)

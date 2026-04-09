@@ -781,7 +781,7 @@
           ],
           "request": {
             "method": "DELETE",
-            "header": [],
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
             "url": "{{baseUrl}}/device-registrations?patientIdentifier={{patientIdentifier}}"
           }
         },
@@ -823,6 +823,207 @@
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{serviceToken}}" }],
             "url": "{{baseUrl}}/admin/health-data?patientIdentifier={{patientIdentifier}}&dateOfBirth={{dateOfBirth}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7 — Alert Flow (Trigger Monitoring)",
+      "description": "Submits alarming health data, triggers the monitoring job manually, then verifies an alert was raised. Run in order.",
+      "item": [
+        {
+          "name": "7.0 Re-register Device (Setup)",
+          "description": "Re-register the device before running the alert flow. Accepts 200 (newly registered) or 409 (already registered from a previous run).",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Device registered or already exists', () => [200, 409].includes(pm.response.code));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/device-registrations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"practiceOdsCode\": \"{{practiceOdsCode}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "7.1 Get Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Token issued', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('accessToken', pm.response.json().access_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "7.2 Submit Alarming Data",
+          "description": "Submits a critically high heart rate (190 bpm) and dangerously low blood oxygen (82%) that should trigger an alert from the monitoring agent.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Alarming data accepted', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/health-data",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"deviceModel\": \"Apple Watch Series 9\",\n  \"dataPoints\": [\n    {\n      \"metricType\": 0,\n      \"value\": 190,\n      \"unit\": \"bpm\",\n      \"recordedAt\": \"2026-04-09T12:00:00Z\",\n      \"externalId\": \"alert-test-hr-001\"\n    },\n    {\n      \"metricType\": 4,\n      \"value\": 82,\n      \"unit\": \"%\",\n      \"recordedAt\": \"2026-04-09T12:00:00Z\",\n      \"externalId\": \"alert-test-spo2-001\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "7.3 Trigger Monitoring Job",
+          "description": "Calls the admin endpoint to start a monitoring job execution immediately, without waiting for the next scheduled run.",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))",
+                  "    .replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+                  "const now = Math.floor(Date.now() / 1000);",
+                  "const payload = btoa(JSON.stringify({ iss: 'hackathon-wearables-service', aud: 'hackathon-wearables-admin', sub: 'service', iat: now, exp: now + 3600 }))",
+                  "    .replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+                  "const signingInput = header + '.' + payload;",
+                  "const keyBytes = CryptoJS.enc.Base64.parse(pm.collectionVariables.get('serviceSigningKey'));",
+                  "const sig = CryptoJS.HmacSHA256(signingInput, keyBytes);",
+                  "const sigB64 = CryptoJS.enc.Base64.stringify(sig).replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+                  "pm.collectionVariables.set('serviceToken', signingInput + '.' + sigB64);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Job triggered', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{serviceToken}}" }],
+            "url": "{{baseUrl}}/admin/monitoring/trigger"
+          }
+        },
+        {
+          "name": "7.4 Check Health Alerts",
+          "description": "Query health alerts for the patient. Run this ~30 seconds after triggering the job to give it time to complete and raise alerts.",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))",
+                  "    .replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+                  "const now = Math.floor(Date.now() / 1000);",
+                  "const payload = btoa(JSON.stringify({ iss: 'hackathon-wearables-service', aud: 'hackathon-wearables-admin', sub: 'service', iat: now, exp: now + 3600 }))",
+                  "    .replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+                  "const signingInput = header + '.' + payload;",
+                  "const keyBytes = CryptoJS.enc.Base64.parse(pm.collectionVariables.get('serviceSigningKey'));",
+                  "const sig = CryptoJS.HmacSHA256(signingInput, keyBytes);",
+                  "const sigB64 = CryptoJS.enc.Base64.stringify(sig).replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+                  "pm.collectionVariables.set('serviceToken', signingInput + '.' + sigB64);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Request succeeded', () => pm.response.to.have.status(200));",
+                  "var data = pm.response.json();",
+                  "pm.test('Returns array', () => pm.expect(data).to.be.an('array'));",
+                  "pm.test('At least one alert raised', () => pm.expect(data.length).to.be.greaterThan(0));",
+                  "pm.test('Alert has severity', () => pm.expect(data[0].severity).to.be.a('string').and.not.empty);",
+                  "pm.test('Alert has message', () => pm.expect(data[0].message).to.be.a('string').and.not.empty);",
+                  "pm.test('Alert has detectedAt', () => pm.expect(data[0].detectedAt).to.be.a('string'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{serviceToken}}" }],
+            "url": "{{baseUrl}}/admin/health-alerts?patientIdentifier={{patientIdentifier}}&dateOfBirth={{dateOfBirth}}"
+          }
+        },
+        {
+          "name": "7.5 Trigger Without Token (Expect 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unauthenticated trigger rejected', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/admin/monitoring/trigger"
+          }
+        },
+        {
+          "name": "7.6 Get Alerts Without Token (Expect 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unauthenticated alerts request rejected', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/health-alerts?patientIdentifier={{patientIdentifier}}&dateOfBirth={{dateOfBirth}}"
           }
         }
       ]

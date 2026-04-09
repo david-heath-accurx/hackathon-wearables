@@ -5,6 +5,14 @@ namespace HealthApi.EntityFramework;
 
 public class AlertStorage(HealthApiDbContext db)
 {
+    public async Task<List<HealthAlert>> GetAsync(string patientIdentifier, CancellationToken ct)
+    {
+        return await db.HealthAlerts
+            .Where(a => a.Patient.PatientIdentifier == patientIdentifier)
+            .OrderByDescending(a => a.DetectedAt)
+            .ToListAsync(ct);
+    }
+
     public async Task CreateAsync(string patientIdentifier, string severity, string message, CancellationToken ct)
     {
         var patientId = await db.Patients
