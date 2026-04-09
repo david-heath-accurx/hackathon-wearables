@@ -1,0 +1,19 @@
+# Build output
+bin/
+obj/
+out/
+
+# Secrets
+appsettings.*.json
+!appsettings.json
+
+# IDE
+.idea/
+.vs/
+*.user
+
+# Docker
+.dockerignore
+
+# Temp
+.ai-temp/

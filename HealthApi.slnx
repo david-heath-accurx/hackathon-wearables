@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/HealthApi.Api/HealthApi.Api.csproj" />
+    <Project Path="src/HealthApi.Domain/HealthApi.Domain.csproj" />
+    <Project Path="src/HealthApi.EntityFramework/HealthApi.EntityFramework.csproj" />
+  </Folder>
+</Solution>
