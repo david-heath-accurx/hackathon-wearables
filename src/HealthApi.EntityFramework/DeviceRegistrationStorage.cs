@@ -5,7 +5,12 @@ namespace HealthApi.EntityFramework;
 
 public class DeviceRegistrationStorage(HealthApiDbContext db)
 {
-    public async Task<bool> RegisterAsync(string patientIdentifier, DateOnly dateOfBirth, string deviceId, CancellationToken ct)
+    public async Task<bool> RegisterAsync(
+        string patientIdentifier,
+        DateOnly dateOfBirth,
+        string practiceOdsCode,
+        string deviceId,
+        CancellationToken ct)
     {
         if (await db.DeviceRegistrations.AnyAsync(r => r.DeviceId == deviceId, ct))
             return false;
@@ -15,7 +20,12 @@ public class DeviceRegistrationStorage(HealthApiDbContext db)
 
         if (patient is null)
         {
-            patient = new Patient { PatientIdentifier = patientIdentifier, DateOfBirth = dateOfBirth };
+            patient = new Patient
+            {
+                PatientIdentifier = patientIdentifier,
+                DateOfBirth = dateOfBirth,
+                PracticeOdsCode = practiceOdsCode,
+            };
             db.Patients.Add(patient);
             await db.SaveChangesAsync(ct);
         }
@@ -58,21 +68,20 @@ public class DeviceRegistrationStorage(HealthApiDbContext db)
             p => p.PatientIdentifier == patientIdentifier && p.DateOfBirth == dateOfBirth, ct);
     }
 
+    public Task UpdateDeviceModelAsync(Guid registrationId, string deviceModel, CancellationToken ct)
+    {
+        return db.DeviceRegistrations
+            .Where(r => r.Id == registrationId)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.DeviceModel, deviceModel), ct);
+    }
+
     public async Task<bool> DeregisterAsync(string deviceId, CancellationToken ct)
     {
-        var registration = await db.DeviceRegistrations
-            .FirstOrDefaultAsync(r => r.DeviceId == deviceId, ct);
-
-        if (registration is null)
-            return false;
-
-        await db.HealthDataPoints
-            .Where(p => p.DeviceId == deviceId)
+        // Health data points are deleted via CASCADE on the FK
+        var deleted = await db.DeviceRegistrations
+            .Where(r => r.DeviceId == deviceId)
             .ExecuteDeleteAsync(ct);
-
-        db.DeviceRegistrations.Remove(registration);
-        await db.SaveChangesAsync(ct);
-        return true;
+        return deleted > 0;
     }
 
     public async Task<bool> DeregisterAllAsync(string patientIdentifier, CancellationToken ct)
@@ -83,22 +92,11 @@ public class DeviceRegistrationStorage(HealthApiDbContext db)
         if (patient is null)
             return false;
 
-        var deviceIds = await db.DeviceRegistrations
-            .Where(r => r.PatientId == patient.Id)
-            .Select(r => r.DeviceId)
-            .ToListAsync(ct);
-
-        if (deviceIds.Count == 0)
-            return false;
-
-        await db.HealthDataPoints
-            .Where(p => deviceIds.Contains(p.DeviceId!))
-            .ExecuteDeleteAsync(ct);
-
-        await db.DeviceRegistrations
+        // Health data points are deleted via CASCADE on the FK
+        var deleted = await db.DeviceRegistrations
             .Where(r => r.PatientId == patient.Id)
             .ExecuteDeleteAsync(ct);
 
-        return true;
+        return deleted > 0;
     }
 }

@@ -49,11 +49,11 @@ public class AdminHealthDataController(HealthDataStorage storage, DeviceRegistra
             .Select(p => new HealthDataPointDto(
                 p.Id,
                 p.MetricType,
+                p.MetricTypeName,
                 p.Value,
                 p.Unit,
                 p.RecordedAt,
-                p.DeviceId,
-                p.DeviceModel,
+                p.DeviceRegistration.DeviceModel,
                 p.ExternalId
             ))
             .ToList();

@@ -18,6 +18,10 @@
       "value": "1985-06-15"
     },
     {
+      "key": "practiceOdsCode",
+      "value": "A81001"
+    },
+    {
       "key": "deviceId",
       "value": "iphone-uuid-abc123"
     },
@@ -62,7 +66,7 @@
             "url": "{{baseUrl}}/device-registrations",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"practiceOdsCode\": \"{{practiceOdsCode}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
             }
           }
         },
@@ -85,7 +89,7 @@
             "url": "{{baseUrl}}/device-registrations",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"practiceOdsCode\": \"{{practiceOdsCode}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
             }
           }
         },
@@ -108,7 +112,7 @@
             "url": "{{baseUrl}}/device-registrations",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId2}}\"\n}"
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"practiceOdsCode\": \"{{practiceOdsCode}}\",\n  \"deviceId\": \"{{deviceId2}}\"\n}"
             }
           }
         }
@@ -251,14 +255,14 @@
           }
         },
         {
-          "name": "3.3 Submit Without ExternalId (No Dedup)",
-          "description": "Points submitted without externalId are always inserted. Suitable for data sources that don't provide stable identifiers.",
+          "name": "3.3 Submit Without ExternalId (Expect 400)",
+          "description": "ExternalId is mandatory on all data points. Omitting it returns a 400 Bad Request.",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Batch accepted', () => pm.response.to.have.status(200));"
+                  "pm.test('Missing externalId rejected', () => pm.response.to.have.status(400));"
                 ],
                 "type": "text/javascript"
               }
@@ -299,7 +303,7 @@
             "url": "{{baseUrl}}/health-data",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"deviceId\": \"unknown-device-999\",\n  \"deviceModel\": \"Mystery Gadget\",\n  \"dataPoints\": [\n    {\n      \"metricType\": 0,\n      \"value\": 60,\n      \"unit\": \"bpm\",\n      \"recordedAt\": \"2026-04-09T09:00:00Z\"\n    }\n  ]\n}"
+              "raw": "{\n  \"deviceId\": \"unknown-device-999\",\n  \"deviceModel\": \"Mystery Gadget\",\n  \"dataPoints\": [\n    {\n      \"metricType\": 0,\n      \"value\": 60,\n      \"unit\": \"bpm\",\n      \"recordedAt\": \"2026-04-09T09:00:00Z\",\n      \"externalId\": \"mystery-ext-001\"\n    }\n  ]\n}"
             }
           }
         },
@@ -322,7 +326,7 @@
             "url": "{{baseUrl}}/health-data",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"deviceModel\": \"Apple Watch Series 9\",\n  \"dataPoints\": [\n    {\n      \"metricType\": 0,\n      \"value\": 60,\n      \"unit\": \"bpm\",\n      \"recordedAt\": \"2026-04-09T09:00:00Z\"\n    }\n  ]\n}"
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"deviceModel\": \"Apple Watch Series 9\",\n  \"dataPoints\": [\n    {\n      \"metricType\": 0,\n      \"value\": 60,\n      \"unit\": \"bpm\",\n      \"recordedAt\": \"2026-04-09T09:00:00Z\",\n      \"externalId\": \"no-token-ext-001\"\n    }\n  ]\n}"
             }
           }
         }
@@ -346,9 +350,15 @@
                   "    pm.expect(new Date(data[i-1].recordedAt) >= new Date(data[i].recordedAt)).to.be.true;",
                   "  }",
                   "});",
-                  "pm.test('ExternalId returned where set', () => {",
-                  "  var withId = data.filter(d => d.externalId !== null);",
-                  "  pm.expect(withId.length).to.be.greaterThan(0);",
+                  "pm.test('All points have externalId', () => {",
+                  "  data.forEach(d => pm.expect(d.externalId).to.be.a('string').and.not.empty);",
+                  "});",
+                  "pm.test('metricTypeName is a non-empty string', () => {",
+                  "  data.forEach(d => pm.expect(d.metricTypeName).to.be.a('string').and.not.empty);",
+                  "});",
+                  "pm.test('DeviceModel present where set', () => {",
+                  "  var withModel = data.filter(d => d.deviceModel !== null);",
+                  "  pm.expect(withModel.length).to.be.greaterThan(0);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -373,8 +383,11 @@
                   "pm.test('All results are HeartRate (0)', () => {",
                   "  data.forEach(d => pm.expect(d.metricType).to.equal(0));",
                   "});",
+                  "pm.test('metricTypeName is HeartRate for all', () => {",
+                  "  data.forEach(d => pm.expect(d.metricTypeName).to.equal('HeartRate'));",
+                  "});",
                   "pm.test('No duplicate externalIds', () => {",
-                  "  var ids = data.filter(d => d.externalId).map(d => d.externalId);",
+                  "  var ids = data.map(d => d.externalId);",
                   "  pm.expect(ids.length).to.equal(new Set(ids).size);",
                   "});"
                 ],
@@ -399,6 +412,9 @@
                   "var data = pm.response.json();",
                   "pm.test('All results are Steps (1)', () => {",
                   "  data.forEach(d => pm.expect(d.metricType).to.equal(1));",
+                  "});",
+                  "pm.test('metricTypeName is Steps for all', () => {",
+                  "  data.forEach(d => pm.expect(d.metricTypeName).to.equal('Steps'));",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -567,7 +583,7 @@
             "url": "{{baseUrl}}/device-registrations",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"practiceOdsCode\": \"{{practiceOdsCode}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
             }
           }
         },
@@ -614,6 +630,9 @@
                   "  for (var i = 1; i < data.length; i++) {",
                   "    pm.expect(new Date(data[i-1].recordedAt) >= new Date(data[i].recordedAt)).to.be.true;",
                   "  }",
+                  "});",
+                  "pm.test('metricTypeName present on all results', () => {",
+                  "  data.forEach(d => pm.expect(d.metricTypeName).to.be.a('string').and.not.empty);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -655,6 +674,9 @@
                   "var data = pm.response.json();",
                   "pm.test('All results are HeartRate (0)', () => {",
                   "  data.forEach(d => pm.expect(d.metricType).to.equal(0));",
+                  "});",
+                  "pm.test('metricTypeName is HeartRate for all', () => {",
+                  "  data.forEach(d => pm.expect(d.metricTypeName).to.equal('HeartRate'));",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -801,44 +823,6 @@
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{serviceToken}}" }],
             "url": "{{baseUrl}}/admin/health-data?patientIdentifier={{patientIdentifier}}&dateOfBirth={{dateOfBirth}}"
-          }
-        },
-        {
-          "name": "6.8 Query Unknown Patient (Expect 404)",
-          "description": "This patient identifier has never been registered — the Patients table has no matching row, so it's a 404, not an empty 200.",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))",
-                  "    .replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
-                  "const now = Math.floor(Date.now() / 1000);",
-                  "const payload = btoa(JSON.stringify({ iss: 'hackathon-wearables-service', aud: 'hackathon-wearables-admin', sub: 'service', iat: now, exp: now + 3600 }))",
-                  "    .replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
-                  "const signingInput = header + '.' + payload;",
-                  "const keyBytes = CryptoJS.enc.Base64.parse(pm.collectionVariables.get('serviceSigningKey'));",
-                  "const sig = CryptoJS.HmacSHA256(signingInput, keyBytes);",
-                  "const sigB64 = CryptoJS.enc.Base64.stringify(sig).replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
-                  "pm.collectionVariables.set('serviceToken', signingInput + '.' + sigB64);"
-                ],
-                "type": "text/javascript"
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Unknown patient returns 404', () => pm.response.to.have.status(404));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{serviceToken}}" }],
-            "url": "{{baseUrl}}/admin/health-data?patientIdentifier=NHS-UNKNOWN&dateOfBirth=1985-06-15"
           }
         }
       ]

@@ -9,45 +9,43 @@ public class HealthDataStorage(HealthApiDbContext db)
     {
         var pointList = points.ToList();
 
-        var incoming = pointList
-            .Where(p => p.ExternalId != null && p.DeviceId != null)
-            .Select(p => (p.DeviceId!, p.ExternalId!))
+        var incomingKeys = pointList
+            .Select(p => (p.DeviceRegistrationId, p.ExternalId))
             .ToList();
 
-        if (incoming.Count > 0)
+        var registrationIds = incomingKeys.Select(x => x.DeviceRegistrationId).Distinct().ToList();
+        var externalIds = incomingKeys.Select(x => x.ExternalId).Distinct().ToList();
+
+        var existing = await db.HealthDataPoints
+            .Where(p => registrationIds.Contains(p.DeviceRegistrationId)
+                     && externalIds.Contains(p.ExternalId))
+            .Select(p => new { p.DeviceRegistrationId, p.ExternalId })
+            .ToListAsync(ct);
+
+        var existingKeys = existing.Select(p => (p.DeviceRegistrationId, p.ExternalId)).ToHashSet();
+
+        var newPoints = pointList
+            .Where(p => !existingKeys.Contains((p.DeviceRegistrationId, p.ExternalId)))
+            .ToList();
+
+        if (newPoints.Count > 0)
         {
-            var deviceIds = incoming.Select(x => x.Item1).Distinct().ToList();
-            var externalIds = incoming.Select(x => x.Item2).Distinct().ToList();
-
-            var existing = await db.HealthDataPoints
-                .Where(p => p.DeviceId != null && deviceIds.Contains(p.DeviceId)
-                         && p.ExternalId != null && externalIds.Contains(p.ExternalId))
-                .Select(p => new { p.DeviceId, p.ExternalId })
-                .ToListAsync(ct);
-
-            var existingKeys = existing.Select(p => (p.DeviceId!, p.ExternalId!)).ToHashSet();
-
-            pointList = pointList
-                .Where(p => p.ExternalId == null || !existingKeys.Contains((p.DeviceId!, p.ExternalId!)))
-                .ToList();
-        }
-
-        if (pointList.Count > 0)
-        {
-            db.HealthDataPoints.AddRange(pointList);
+            db.HealthDataPoints.AddRange(newPoints);
             await db.SaveChangesAsync(ct);
         }
     }
 
     public async Task<List<HealthDataPoint>> GetAsync(
-        string userId,
+        string patientIdentifier,
         HealthMetricType? metricType,
         DateTimeOffset? from,
         DateTimeOffset? to,
         CancellationToken ct
     )
     {
-        var query = db.HealthDataPoints.Where(p => p.UserId == userId);
+        var query = db.HealthDataPoints
+            .Include(p => p.DeviceRegistration)
+            .Where(p => p.DeviceRegistration.Patient.PatientIdentifier == patientIdentifier);
 
         if (metricType is not null)
             query = query.Where(p => p.MetricType == metricType);
@@ -65,7 +63,7 @@ public class HealthDataStorage(HealthApiDbContext db)
     {
         return db.HealthDataPoints
             .Where(p => p.CreatedAt >= since)
-            .Select(p => p.UserId)
+            .Select(p => p.DeviceRegistration.Patient.PatientIdentifier)
             .Distinct()
             .ToListAsync(ct);
     }

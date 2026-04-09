@@ -235,7 +235,7 @@ public class HealthMonitoringAgent(
                     value = p.Value,
                     unit = p.Unit,
                     recorded_at = p.RecordedAt.ToString("O"),
-                    device = p.DeviceModel,
+                    device = p.DeviceRegistration?.DeviceModel,
                 }).ToList()
             );
 

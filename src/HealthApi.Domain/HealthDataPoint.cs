@@ -3,14 +3,14 @@ namespace HealthApi.Domain;
 public record HealthDataPoint
 {
     public Guid Id { get; init; } = Guid.NewGuid();
-    public required string UserId { get; init; }
+    public required Guid DeviceRegistrationId { get; init; }
+    public DeviceRegistration DeviceRegistration { get; set; } = null!;
     public required HealthMetricType MetricType { get; init; }
     public required double Value { get; init; }
     public required string Unit { get; init; }
     public required DateTimeOffset RecordedAt { get; init; }
-    public string? DeviceId { get; init; }
-    public string? DeviceModel { get; init; }
-    public string? ExternalId { get; init; }
+    public required string ExternalId { get; init; }
+    public string MetricTypeName { get; init; } = null!;
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 }
 

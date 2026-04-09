@@ -52,17 +52,18 @@ public class HealthDataController(HealthDataStorage storage, DeviceRegistrationS
 
         var points = request.DataPoints.Select(p => new HealthDataPoint
         {
-            UserId = registration.Patient.PatientIdentifier,
+            DeviceRegistrationId = registration.Id,
             MetricType = p.MetricType,
             Value = p.Value,
             Unit = p.Unit,
             RecordedAt = p.RecordedAt,
-            DeviceId = request.DeviceId,
-            DeviceModel = request.DeviceModel,
             ExternalId = p.ExternalId,
         });
 
         await storage.SaveAsync(points, ct);
+
+        if (request.DeviceModel is not null && registration.DeviceModel != request.DeviceModel)
+            await registrations.UpdateDeviceModelAsync(registration.Id, request.DeviceModel, ct);
 
         return Ok();
     }
@@ -84,19 +85,19 @@ public class HealthDataController(HealthDataStorage storage, DeviceRegistrationS
         CancellationToken ct
     )
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var patientIdentifier = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-        var results = await storage.GetAsync(userId, metricType, from, to, ct);
+        var results = await storage.GetAsync(patientIdentifier, metricType, from, to, ct);
 
         return results
             .Select(p => new HealthDataPointDto(
                 p.Id,
                 p.MetricType,
+                p.MetricTypeName,
                 p.Value,
                 p.Unit,
                 p.RecordedAt,
-                p.DeviceId,
-                p.DeviceModel,
+                p.DeviceRegistration.DeviceModel,
                 p.ExternalId
             ))
             .ToList();
@@ -118,23 +119,23 @@ public record SubmitHealthDataRequest(
 /// <param name="Value">Numeric value of the reading</param>
 /// <param name="Unit">Unit of measurement (e.g. "bpm", "steps", "%")</param>
 /// <param name="RecordedAt">When the reading was recorded on the device (ISO 8601)</param>
-/// <param name="ExternalId">Optional unique identifier from the source system (e.g. HealthKit UUID). When provided, duplicate submissions with the same device ID and external ID are silently ignored.</param>
+/// <param name="ExternalId">Unique identifier from the source system (e.g. HealthKit UUID). Used for idempotent submission — duplicate readings with the same device registration and external ID are silently ignored.</param>
 public record HealthDataPointInput(
     HealthMetricType MetricType,
     double Value,
     string Unit,
     DateTimeOffset RecordedAt,
-    string? ExternalId
+    string ExternalId
 );
 
 /// <summary>A stored health data point</summary>
 public record HealthDataPointDto(
     Guid Id,
     HealthMetricType MetricType,
+    string MetricTypeName,
     double Value,
     string Unit,
     DateTimeOffset RecordedAt,
-    string? DeviceId,
     string? DeviceModel,
     string? ExternalId
 );

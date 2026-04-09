@@ -4,6 +4,7 @@ using HealthApi.EntityFramework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HealthApi.EntityFramework.Migrations
 {
     [DbContext(typeof(HealthApiDbContext))]
-    partial class HealthApiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260409170000_RefactorHealthData")]
+    partial class RefactorHealthData
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -113,11 +116,6 @@ namespace HealthApi.EntityFramework.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("PracticeOdsCode")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
 
                     b.Property<DateTimeOffset>("RegisteredAt")
                         .HasColumnType("datetimeoffset");

@@ -11,6 +11,8 @@ using Microsoft.Extensions.Logging;
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
     {
+        services.AddApplicationInsightsTelemetryWorkerService();
+
         services.AddDbContext<HealthApiDbContext>(options =>
             options.UseSqlServer(context.Configuration.GetConnectionString("HealthApiDb")));
 
