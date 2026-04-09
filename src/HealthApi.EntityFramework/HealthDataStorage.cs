@@ -60,4 +60,13 @@ public class HealthDataStorage(HealthApiDbContext db)
 
         return await query.OrderByDescending(p => p.RecordedAt).ToListAsync(ct);
     }
+
+    public Task<List<string>> GetPatientsWithRecentDataAsync(DateTimeOffset since, CancellationToken ct)
+    {
+        return db.HealthDataPoints
+            .Where(p => p.CreatedAt >= since)
+            .Select(p => p.UserId)
+            .Distinct()
+            .ToListAsync(ct);
+    }
 }

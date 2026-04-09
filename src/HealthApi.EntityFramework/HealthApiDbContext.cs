@@ -8,6 +8,7 @@ public class HealthApiDbContext(DbContextOptions<HealthApiDbContext> options) : 
     public DbSet<HealthDataPoint> HealthDataPoints => Set<HealthDataPoint>();
     public DbSet<DeviceRegistration> DeviceRegistrations => Set<DeviceRegistration>();
     public DbSet<Patient> Patients => Set<Patient>();
+    public DbSet<HealthAlert> HealthAlerts => Set<HealthAlert>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -41,6 +42,15 @@ public class HealthApiDbContext(DbContextOptions<HealthApiDbContext> options) : 
                 .WithMany()
                 .HasForeignKey(e => e.PatientId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<HealthAlert>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.PatientIdentifier, e.DetectedAt });
+            entity.Property(e => e.PatientIdentifier).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Severity).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Message).HasMaxLength(2000).IsRequired();
         });
     }
 }
