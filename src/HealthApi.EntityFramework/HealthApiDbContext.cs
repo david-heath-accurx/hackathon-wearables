@@ -7,6 +7,7 @@ public class HealthApiDbContext(DbContextOptions<HealthApiDbContext> options) : 
 {
     public DbSet<HealthDataPoint> HealthDataPoints => Set<HealthDataPoint>();
     public DbSet<DeviceRegistration> DeviceRegistrations => Set<DeviceRegistration>();
+    public DbSet<Patient> Patients => Set<Patient>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -24,13 +25,22 @@ public class HealthApiDbContext(DbContextOptions<HealthApiDbContext> options) : 
                 .HasFilter("[ExternalId] IS NOT NULL");
         });
 
+        modelBuilder.Entity<Patient>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.PatientIdentifier).IsUnique();
+            entity.Property(e => e.PatientIdentifier).HasMaxLength(100).IsRequired();
+        });
+
         modelBuilder.Entity<DeviceRegistration>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.DeviceId).IsUnique();
-            entity.HasIndex(e => new { e.PatientIdentifier, e.DateOfBirth });
             entity.Property(e => e.DeviceId).HasMaxLength(256).IsRequired();
-            entity.Property(e => e.PatientIdentifier).HasMaxLength(100).IsRequired();
+            entity.HasOne(e => e.Patient)
+                .WithMany()
+                .HasForeignKey(e => e.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

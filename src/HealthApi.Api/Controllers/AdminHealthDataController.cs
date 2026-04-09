@@ -22,9 +22,9 @@ public class AdminHealthDataController(HealthDataStorage storage, DeviceRegistra
     /// <param name="metricType">Filter by metric type (see POST /health-data for values)</param>
     /// <param name="from">Start of time range (inclusive, ISO 8601)</param>
     /// <param name="to">End of time range (inclusive, ISO 8601)</param>
-    /// <response code="200">List of health data points for the patient</response>
+    /// <response code="200">Health data for the patient. Empty array if the patient is registered but has no active devices or data.</response>
     /// <response code="401">Missing or invalid service token</response>
-    /// <response code="404">No registered patient found matching these details</response>
+    /// <response code="404">Patient identifier and date of birth not found</response>
     [HttpGet]
     [ProducesResponseType(typeof(List<HealthDataPointDto>), 200)]
     [ProducesResponseType(401)]
@@ -38,10 +38,10 @@ public class AdminHealthDataController(HealthDataStorage storage, DeviceRegistra
         CancellationToken ct
     )
     {
-        var patientExists = await registrations.PatientExistsAsync(patientIdentifier, dateOfBirth, ct);
+        var patient = await registrations.FindPatientAsync(patientIdentifier, dateOfBirth, ct);
 
-        if (!patientExists)
-            return NotFound("No registered patient found matching these details.");
+        if (patient is null)
+            return NotFound("Patient not found.");
 
         var results = await storage.GetAsync(patientIdentifier, metricType, from, to, ct);
 

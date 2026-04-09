@@ -52,7 +52,7 @@ public class HealthDataController(HealthDataStorage storage, DeviceRegistrationS
 
         var points = request.DataPoints.Select(p => new HealthDataPoint
         {
-            UserId = registration.PatientIdentifier,
+            UserId = registration.Patient.PatientIdentifier,
             MetricType = p.MetricType,
             Value = p.Value,
             Unit = p.Unit,

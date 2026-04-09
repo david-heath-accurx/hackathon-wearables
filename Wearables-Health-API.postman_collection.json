@@ -742,6 +742,104 @@
             "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
             "url": "{{baseUrl}}/admin/health-data?patientIdentifier={{patientIdentifier}}&dateOfBirth={{dateOfBirth}}"
           }
+        },
+        {
+          "name": "6.6 Deregister All Devices (Patient Record Remains)",
+          "description": "Deregisters all devices. The Patient row is preserved — subsequent admin queries still return 200, not 404.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('All devices deregistered', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/device-registrations?patientIdentifier={{patientIdentifier}}"
+          }
+        },
+        {
+          "name": "6.7 Query After Deregistration (Patient Known, No Data)",
+          "description": "Patient record exists in the Patients table so this returns 200 (not 404), but health data was cascade-deleted with the device — the array is empty.",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))",
+                  "    .replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+                  "const now = Math.floor(Date.now() / 1000);",
+                  "const payload = btoa(JSON.stringify({ iss: 'hackathon-wearables-service', aud: 'hackathon-wearables-admin', sub: 'service', iat: now, exp: now + 3600 }))",
+                  "    .replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+                  "const signingInput = header + '.' + payload;",
+                  "const keyBytes = CryptoJS.enc.Base64.parse(pm.collectionVariables.get('serviceSigningKey'));",
+                  "const sig = CryptoJS.HmacSHA256(signingInput, keyBytes);",
+                  "const sigB64 = CryptoJS.enc.Base64.stringify(sig).replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+                  "pm.collectionVariables.set('serviceToken', signingInput + '.' + sigB64);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Patient found (200, not 404)', () => pm.response.to.have.status(200));",
+                  "var data = pm.response.json();",
+                  "pm.test('Data array is empty after deregistration', () => pm.expect(data).to.be.an('array').that.is.empty);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{serviceToken}}" }],
+            "url": "{{baseUrl}}/admin/health-data?patientIdentifier={{patientIdentifier}}&dateOfBirth={{dateOfBirth}}"
+          }
+        },
+        {
+          "name": "6.8 Query Unknown Patient (Expect 404)",
+          "description": "This patient identifier has never been registered — the Patients table has no matching row, so it's a 404, not an empty 200.",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))",
+                  "    .replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+                  "const now = Math.floor(Date.now() / 1000);",
+                  "const payload = btoa(JSON.stringify({ iss: 'hackathon-wearables-service', aud: 'hackathon-wearables-admin', sub: 'service', iat: now, exp: now + 3600 }))",
+                  "    .replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+                  "const signingInput = header + '.' + payload;",
+                  "const keyBytes = CryptoJS.enc.Base64.parse(pm.collectionVariables.get('serviceSigningKey'));",
+                  "const sig = CryptoJS.HmacSHA256(signingInput, keyBytes);",
+                  "const sigB64 = CryptoJS.enc.Base64.stringify(sig).replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+                  "pm.collectionVariables.set('serviceToken', signingInput + '.' + sigB64);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unknown patient returns 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{serviceToken}}" }],
+            "url": "{{baseUrl}}/admin/health-data?patientIdentifier=NHS-UNKNOWN&dateOfBirth=1985-06-15"
+          }
         }
       ]
     }
