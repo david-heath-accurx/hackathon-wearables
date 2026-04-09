@@ -1,0 +1,60 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR: hackathonwearables.azurecr.io
+  RESOURCE_GROUP: Hackathon-David-Heath
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set image tag
+        run: echo "TAG=sha-${{ github.sha }}" >> $GITHUB_ENV
+
+      - name: Build and push API image
+        run: |
+          az acr build \
+            --registry hackathonwearables \
+            --image health-api:${{ env.TAG }} \
+            --file src/HealthApi.Api/Dockerfile \
+            .
+
+      - name: Build and push Functions image
+        run: |
+          az acr build \
+            --registry hackathonwearables \
+            --image health-functions:${{ env.TAG }} \
+            --file src/HealthApi.Functions/Dockerfile \
+            .
+
+      - name: Deploy API
+        run: |
+          az containerapp update \
+            --name hackathon-wearables-api \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.ACR }}/health-api:${{ env.TAG }}
+
+      - name: Deploy Functions job
+        run: |
+          az containerapp job update \
+            --name hackathon-wearables-monitor \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.ACR }}/health-functions:${{ env.TAG }}
