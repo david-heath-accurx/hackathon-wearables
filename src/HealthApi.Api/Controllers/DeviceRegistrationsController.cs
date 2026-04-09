@@ -15,7 +15,7 @@ public class DeviceRegistrationsController(DeviceRegistrationStorage storage) : 
         CancellationToken ct
     )
     {
-        var registered = await storage.RegisterAsync(request.PatientId, request.DeviceId, ct);
+        var registered = await storage.RegisterAsync(request.PatientIdentifier, request.DateOfBirth, request.DeviceId, ct);
 
         if (!registered)
             return Conflict("This device is already registered.");
@@ -35,4 +35,4 @@ public class DeviceRegistrationsController(DeviceRegistrationStorage storage) : 
     }
 }
 
-public record RegisterDeviceRequest(int PatientId, string DeviceId);
+public record RegisterDeviceRequest(string PatientIdentifier, DateOnly DateOfBirth, string DeviceId);

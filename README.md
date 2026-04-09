@@ -77,7 +77,8 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "patientId": 42,
+  "patientIdentifier": "NHS-1234567890",
+  "dateOfBirth": "1985-06-15",
   "deviceId": "iphone-uuid-abc123"
 }
 ```

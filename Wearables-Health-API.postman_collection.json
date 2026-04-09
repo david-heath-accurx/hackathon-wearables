@@ -193,7 +193,7 @@
         "url": "{{baseUrl}}/device-registrations",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"patientId\": 42,\n  \"deviceId\": \"iphone-uuid-abc123\"\n}"
+          "raw": "{\n  \"patientIdentifier\": \"NHS-1234567890\",\n  \"dateOfBirth\": \"1985-06-15\",\n  \"deviceId\": \"iphone-uuid-abc123\"\n}"
         }
       }
     },
@@ -219,7 +219,7 @@
         "url": "{{baseUrl}}/device-registrations",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"patientId\": 42,\n  \"deviceId\": \"iphone-uuid-abc123\"\n}"
+          "raw": "{\n  \"patientIdentifier\": \"NHS-1234567890\",\n  \"dateOfBirth\": \"1985-06-15\",\n  \"deviceId\": \"iphone-uuid-abc123\"\n}"
         }
       }
     },

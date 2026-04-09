@@ -5,7 +5,7 @@ namespace HealthApi.EntityFramework;
 
 public class DeviceRegistrationStorage(HealthApiDbContext db)
 {
-    public async Task<bool> RegisterAsync(int patientId, string deviceId, CancellationToken ct)
+    public async Task<bool> RegisterAsync(string patientIdentifier, DateOnly dateOfBirth, string deviceId, CancellationToken ct)
     {
         var alreadyRegistered = await db.DeviceRegistrations
             .AnyAsync(r => r.DeviceId == deviceId, ct);
@@ -15,7 +15,8 @@ public class DeviceRegistrationStorage(HealthApiDbContext db)
 
         db.DeviceRegistrations.Add(new DeviceRegistration
         {
-            PatientId = patientId,
+            PatientIdentifier = patientIdentifier,
+            DateOfBirth = dateOfBirth,
             DeviceId = deviceId,
         });
 

@@ -24,8 +24,9 @@ public class HealthApiDbContext(DbContextOptions<HealthApiDbContext> options) : 
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.DeviceId).IsUnique();
-            entity.HasIndex(e => e.PatientId);
+            entity.HasIndex(e => new { e.PatientIdentifier, e.DateOfBirth });
             entity.Property(e => e.DeviceId).HasMaxLength(256).IsRequired();
+            entity.Property(e => e.PatientIdentifier).HasMaxLength(100).IsRequired();
         });
     }
 }
