@@ -18,6 +18,10 @@ public class HealthApiDbContext(DbContextOptions<HealthApiDbContext> options) : 
             entity.Property(e => e.Unit).HasMaxLength(50).IsRequired();
             entity.Property(e => e.DeviceId).HasMaxLength(256);
             entity.Property(e => e.DeviceModel).HasMaxLength(256);
+            entity.Property(e => e.ExternalId).HasMaxLength(256);
+            entity.HasIndex(e => new { e.DeviceId, e.ExternalId })
+                .IsUnique()
+                .HasFilter("[ExternalId] IS NOT NULL");
         });
 
         modelBuilder.Entity<DeviceRegistration>(entity =>

@@ -59,6 +59,7 @@ public class HealthDataController(HealthDataStorage storage, DeviceRegistrationS
             RecordedAt = p.RecordedAt,
             DeviceId = request.DeviceId,
             DeviceModel = request.DeviceModel,
+            ExternalId = p.ExternalId,
         });
 
         await storage.SaveAsync(points, ct);
@@ -95,7 +96,8 @@ public class HealthDataController(HealthDataStorage storage, DeviceRegistrationS
                 p.Unit,
                 p.RecordedAt,
                 p.DeviceId,
-                p.DeviceModel
+                p.DeviceModel,
+                p.ExternalId
             ))
             .ToList();
     }
@@ -116,11 +118,13 @@ public record SubmitHealthDataRequest(
 /// <param name="Value">Numeric value of the reading</param>
 /// <param name="Unit">Unit of measurement (e.g. "bpm", "steps", "%")</param>
 /// <param name="RecordedAt">When the reading was recorded on the device (ISO 8601)</param>
+/// <param name="ExternalId">Optional unique identifier from the source system (e.g. HealthKit UUID). When provided, duplicate submissions with the same device ID and external ID are silently ignored.</param>
 public record HealthDataPointInput(
     HealthMetricType MetricType,
     double Value,
     string Unit,
-    DateTimeOffset RecordedAt
+    DateTimeOffset RecordedAt,
+    string? ExternalId
 );
 
 /// <summary>A stored health data point</summary>
@@ -131,5 +135,6 @@ public record HealthDataPointDto(
     string Unit,
     DateTimeOffset RecordedAt,
     string? DeviceId,
-    string? DeviceModel
+    string? DeviceModel,
+    string? ExternalId
 );

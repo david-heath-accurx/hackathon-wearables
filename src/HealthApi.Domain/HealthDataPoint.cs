@@ -10,6 +10,7 @@ public record HealthDataPoint
     public required DateTimeOffset RecordedAt { get; init; }
     public string? DeviceId { get; init; }
     public string? DeviceModel { get; init; }
+    public string? ExternalId { get; init; }
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 }
 
