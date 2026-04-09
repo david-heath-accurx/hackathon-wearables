@@ -9,12 +9,16 @@
       "value": "https://hackathon-wearables-api.whitemushroom-7e5ea013.uksouth.azurecontainerapps.io"
     },
     {
-      "key": "clientId",
-      "value": "8d8eb498-175d-4cf3-999e-9d17f3185e1f"
+      "key": "patientIdentifier",
+      "value": "NHS-1234567890"
     },
     {
-      "key": "clientSecret",
-      "value": "YOUR_CLIENT_SECRET_HERE"
+      "key": "dateOfBirth",
+      "value": "1985-06-15"
+    },
+    {
+      "key": "deviceId",
+      "value": "iphone-uuid-abc123"
     },
     {
       "key": "accessToken",
@@ -44,7 +48,7 @@
         "url": "{{baseUrl}}/auth/token",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"clientSecret\": \"{{clientSecret}}\"\n}"
+          "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
         }
       }
     },

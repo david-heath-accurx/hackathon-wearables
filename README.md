@@ -41,25 +41,28 @@ All endpoints except `/auth/token` require a `Bearer` token in the `Authorizatio
 
 #### `POST /auth/token`
 
-Exchange client credentials for a JWT access token. Tokens expire after 1 hour.
+Authenticate using a registered device and patient details. The combination of `patientIdentifier`, `dateOfBirth`, and `deviceId` must match an existing registration. Tokens expire after 1 hour.
 
 ```http
 POST /auth/token
 Content-Type: application/json
 
 {
-  "clientId": "<your-client-id>",
-  "clientSecret": "<your-client-secret>"
+  "patientIdentifier": "NHS-1234567890",
+  "dateOfBirth": "1985-06-15",
+  "deviceId": "iphone-uuid-abc123"
 }
 ```
 
 ```json
 {
   "access_token": "eyJ...",
-  "expires_in": 3599,
+  "expires_in": 3600,
   "token_type": "Bearer"
 }
 ```
+
+Returns `401 Unauthorized` if no matching registration is found.
 
 ---
 

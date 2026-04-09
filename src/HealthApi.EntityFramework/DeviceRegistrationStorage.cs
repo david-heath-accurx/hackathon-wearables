@@ -24,6 +24,16 @@ public class DeviceRegistrationStorage(HealthApiDbContext db)
         return true;
     }
 
+    public async Task<bool> IsRegisteredAsync(string patientIdentifier, DateOnly dateOfBirth, string deviceId, CancellationToken ct)
+    {
+        return await db.DeviceRegistrations.AnyAsync(
+            r => r.DeviceId == deviceId
+              && r.PatientIdentifier == patientIdentifier
+              && r.DateOfBirth == dateOfBirth,
+            ct
+        );
+    }
+
     public async Task<bool> DeregisterAsync(string deviceId, CancellationToken ct)
     {
         var registration = await db.DeviceRegistrations

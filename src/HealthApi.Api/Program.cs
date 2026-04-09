@@ -15,21 +15,24 @@ builder.Services.AddDbContext<HealthApiDbContext>(options =>
 
 builder.Services.AddScoped<HealthDataStorage>();
 builder.Services.AddScoped<DeviceRegistrationStorage>();
-builder.Services.AddHttpClient();
 
-var tenantId = builder.Configuration["Auth:TenantId"]!;
-var apiAppId = builder.Configuration["Auth:ApiAppId"]!;
+var signingKey = new SymmetricSecurityKey(
+    Convert.FromBase64String(builder.Configuration["Auth:SigningKey"]!)
+);
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        options.Authority = $"https://login.microsoftonline.com/{tenantId}/v2.0";
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Auth:Issuer"],
             ValidateAudience = true,
-            ValidAudiences = [$"api://{apiAppId}", apiAppId],
+            ValidAudience = builder.Configuration["Auth:Audience"],
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = signingKey,
+            ValidateLifetime = true,
         };
     });
 

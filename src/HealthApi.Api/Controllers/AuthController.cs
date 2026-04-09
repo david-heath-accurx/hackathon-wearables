@@ -1,12 +1,16 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using HealthApi.EntityFramework;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 
 namespace HealthApi.Api.Controllers;
 
 [ApiController]
 [Route("auth")]
 [AllowAnonymous]
-public class AuthController(IConfiguration config, IHttpClientFactory httpClientFactory) : ControllerBase
+public class AuthController(IConfiguration config, DeviceRegistrationStorage storage) : ControllerBase
 {
     [HttpPost("token")]
     public async Task<IActionResult> GetToken(
@@ -14,37 +18,38 @@ public class AuthController(IConfiguration config, IHttpClientFactory httpClient
         CancellationToken ct
     )
     {
-        var tenantId = config["Auth:TenantId"];
-        var apiAppId = config["Auth:ApiAppId"];
-
-        var client = httpClientFactory.CreateClient();
-        var response = await client.PostAsync(
-            $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                ["grant_type"] = "client_credentials",
-                ["client_id"] = request.ClientId,
-                ["client_secret"] = request.ClientSecret,
-                ["scope"] = $"api://{apiAppId}/.default",
-            }),
+        var isRegistered = await storage.IsRegisteredAsync(
+            request.PatientIdentifier,
+            request.DateOfBirth,
+            request.DeviceId,
             ct
         );
 
-        if (!response.IsSuccessStatusCode)
-        {
-            var error = await response.Content.ReadAsStringAsync(ct);
-            return Unauthorized(error);
-        }
+        if (!isRegistered)
+            return Unauthorized("Device and patient registration not found.");
 
-        var result = await response.Content.ReadFromJsonAsync<TokenResponse>(ct);
-        return Ok(result);
+        var signingKey = new SymmetricSecurityKey(
+            Convert.FromBase64String(config["Auth:SigningKey"]!)
+        );
+
+        var token = new JwtSecurityToken(
+            issuer: config["Auth:Issuer"],
+            audience: config["Auth:Audience"],
+            claims: [
+                new Claim(JwtRegisteredClaimNames.Sub, request.PatientIdentifier),
+                new Claim("deviceId", request.DeviceId),
+            ],
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)
+        );
+
+        return Ok(new
+        {
+            access_token = new JwtSecurityTokenHandler().WriteToken(token),
+            expires_in = 3600,
+            token_type = "Bearer",
+        });
     }
 }
 
-public record TokenRequest(string ClientId, string ClientSecret);
-
-public record TokenResponse(
-    string access_token,
-    int expires_in,
-    string token_type
-);
+public record TokenRequest(string PatientIdentifier, DateOnly DateOfBirth, string DeviceId);
