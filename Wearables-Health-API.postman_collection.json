@@ -1,6 +1,7 @@
 {
   "info": {
     "name": "Wearables Health API",
+    "description": "Full flow collection for the Wearables Health API. Run requests in order — each folder represents a stage of the patient journey.\n\nVariables are auto-set by test scripts. The only manual step before running is ensuring the base URL is correct.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -21,268 +22,535 @@
       "value": "iphone-uuid-abc123"
     },
     {
+      "key": "deviceId2",
+      "value": "iphone-uuid-def456"
+    },
+    {
       "key": "accessToken",
       "value": ""
     }
   ],
   "item": [
     {
-      "name": "1. Get Token",
-      "event": [
+      "name": "1 — Device Registration",
+      "item": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "var json = pm.response.json();",
-              "pm.collectionVariables.set('accessToken', json.access_token);",
-              "pm.test('Token received', () => pm.response.to.have.status(200));",
-              "pm.test('access_token present', () => pm.expect(json.access_token).to.be.a('string'));"
-            ],
-            "type": "text/javascript"
+          "name": "1.1 Register Device (Patient Consent)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Device registered', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/device-registrations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "1.2 Register Same Device Again (Expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Duplicate device rejected', () => pm.response.to.have.status(409));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/device-registrations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "1.3 Register Second Device (Same Patient)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Second device registered', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/device-registrations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId2}}\"\n}"
+            }
           }
         }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "url": "{{baseUrl}}/auth/token",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
-        }
-      }
+      ]
     },
     {
-      "name": "2. Submit Heart Rate",
-      "event": [
+      "name": "2 — Authentication",
+      "item": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Data accepted', () => pm.response.to.have.status(200));"
-            ],
-            "type": "text/javascript"
+          "name": "2.1 Get Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Token issued', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('access_token present', () => pm.expect(json.access_token).to.be.a('string'));",
+                  "pm.test('Token type is Bearer', () => pm.expect(json.tokenType).to.equal('Bearer'));",
+                  "pm.test('Expires in 1 hour', () => pm.expect(json.expiresIn).to.equal(3600));",
+                  "pm.collectionVariables.set('accessToken', json.access_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "2.2 Get Token — Wrong Date of Birth (Expect 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unrecognised credentials rejected', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"1999-01-01\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "2.3 Get Token — Unregistered Device (Expect 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unregistered device rejected', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"unknown-device-999\"\n}"
+            }
           }
         }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
-        ],
-        "url": "{{baseUrl}}/health-data",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"deviceId\": \"apple-watch-s9-001\",\n  \"deviceModel\": \"Apple Watch Series 9\",\n  \"dataPoints\": [\n    {\n      \"metricType\": 0,\n      \"value\": 72,\n      \"unit\": \"bpm\",\n      \"recordedAt\": \"2026-04-08T09:00:00Z\"\n    },\n    {\n      \"metricType\": 0,\n      \"value\": 85,\n      \"unit\": \"bpm\",\n      \"recordedAt\": \"2026-04-08T09:30:00Z\"\n    },\n    {\n      \"metricType\": 0,\n      \"value\": 68,\n      \"unit\": \"bpm\",\n      \"recordedAt\": \"2026-04-08T10:00:00Z\"\n    }\n  ]\n}"
-        }
-      }
+      ]
     },
     {
-      "name": "3. Submit Mixed Metrics",
-      "event": [
+      "name": "3 — Submit Health Data",
+      "item": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Data accepted', () => pm.response.to.have.status(200));"
+          "name": "3.1 Submit Batch with ExternalIds",
+          "description": "Submits a realistic mixed batch of metrics with HealthKit-style UUIDs as externalIds. Safe to retry — duplicates are silently ignored.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Batch accepted', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "type": "text/javascript"
+            "url": "{{baseUrl}}/health-data",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"deviceModel\": \"Apple Watch Series 9\",\n  \"dataPoints\": [\n    {\n      \"metricType\": 0,\n      \"value\": 72,\n      \"unit\": \"bpm\",\n      \"recordedAt\": \"2026-04-09T08:00:00Z\",\n      \"externalId\": \"a1b2c3d4-0001-0000-0000-000000000001\"\n    },\n    {\n      \"metricType\": 0,\n      \"value\": 85,\n      \"unit\": \"bpm\",\n      \"recordedAt\": \"2026-04-09T08:30:00Z\",\n      \"externalId\": \"a1b2c3d4-0001-0000-0000-000000000002\"\n    },\n    {\n      \"metricType\": 0,\n      \"value\": 68,\n      \"unit\": \"bpm\",\n      \"recordedAt\": \"2026-04-09T09:00:00Z\",\n      \"externalId\": \"a1b2c3d4-0001-0000-0000-000000000003\"\n    },\n    {\n      \"metricType\": 1,\n      \"value\": 8432,\n      \"unit\": \"steps\",\n      \"recordedAt\": \"2026-04-09T09:00:00Z\",\n      \"externalId\": \"a1b2c3d4-0002-0000-0000-000000000001\"\n    },\n    {\n      \"metricType\": 2,\n      \"value\": 387,\n      \"unit\": \"kcal\",\n      \"recordedAt\": \"2026-04-09T09:00:00Z\",\n      \"externalId\": \"a1b2c3d4-0003-0000-0000-000000000001\"\n    },\n    {\n      \"metricType\": 4,\n      \"value\": 98.5,\n      \"unit\": \"%\",\n      \"recordedAt\": \"2026-04-09T09:00:00Z\",\n      \"externalId\": \"a1b2c3d4-0004-0000-0000-000000000001\"\n    },\n    {\n      \"metricType\": 5,\n      \"value\": 7.5,\n      \"unit\": \"hours\",\n      \"recordedAt\": \"2026-04-09T07:00:00Z\",\n      \"externalId\": \"a1b2c3d4-0005-0000-0000-000000000001\"\n    },\n    {\n      \"metricType\": 10,\n      \"value\": 48,\n      \"unit\": \"ms\",\n      \"recordedAt\": \"2026-04-09T09:00:00Z\",\n      \"externalId\": \"a1b2c3d4-000a-0000-0000-000000000001\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "3.2 Retry Same Batch (Duplicates Ignored)",
+          "description": "Sending the exact same batch again. All points have externalIds already stored — they are silently dropped and the request still returns 200.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Retry accepted (duplicates ignored)', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/health-data",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"deviceModel\": \"Apple Watch Series 9\",\n  \"dataPoints\": [\n    {\n      \"metricType\": 0,\n      \"value\": 72,\n      \"unit\": \"bpm\",\n      \"recordedAt\": \"2026-04-09T08:00:00Z\",\n      \"externalId\": \"a1b2c3d4-0001-0000-0000-000000000001\"\n    },\n    {\n      \"metricType\": 0,\n      \"value\": 85,\n      \"unit\": \"bpm\",\n      \"recordedAt\": \"2026-04-09T08:30:00Z\",\n      \"externalId\": \"a1b2c3d4-0001-0000-0000-000000000002\"\n    },\n    {\n      \"metricType\": 1,\n      \"value\": 8432,\n      \"unit\": \"steps\",\n      \"recordedAt\": \"2026-04-09T09:00:00Z\",\n      \"externalId\": \"a1b2c3d4-0002-0000-0000-000000000001\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "3.3 Submit Without ExternalId (No Dedup)",
+          "description": "Points submitted without externalId are always inserted. Suitable for data sources that don't provide stable identifiers.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Batch accepted', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/health-data",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"deviceModel\": \"Apple Watch Series 9\",\n  \"dataPoints\": [\n    {\n      \"metricType\": 9,\n      \"value\": 16,\n      \"unit\": \"breaths/min\",\n      \"recordedAt\": \"2026-04-09T09:00:00Z\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "3.4 Submit to Unregistered Device (Expect 422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unregistered device rejected', () => pm.response.to.have.status(422));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/health-data",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"unknown-device-999\",\n  \"deviceModel\": \"Mystery Gadget\",\n  \"dataPoints\": [\n    {\n      \"metricType\": 0,\n      \"value\": 60,\n      \"unit\": \"bpm\",\n      \"recordedAt\": \"2026-04-09T09:00:00Z\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "3.5 Submit Without Token (Expect 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unauthenticated request rejected', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/health-data",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"deviceModel\": \"Apple Watch Series 9\",\n  \"dataPoints\": [\n    {\n      \"metricType\": 0,\n      \"value\": 60,\n      \"unit\": \"bpm\",\n      \"recordedAt\": \"2026-04-09T09:00:00Z\"\n    }\n  ]\n}"
+            }
           }
         }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
-        ],
-        "url": "{{baseUrl}}/health-data",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"deviceId\": \"apple-watch-s9-001\",\n  \"deviceModel\": \"Apple Watch Series 9\",\n  \"dataPoints\": [\n    {\n      \"metricType\": 1,\n      \"value\": 8432,\n      \"unit\": \"steps\",\n      \"recordedAt\": \"2026-04-08T10:00:00Z\"\n    },\n    {\n      \"metricType\": 2,\n      \"value\": 420,\n      \"unit\": \"kcal\",\n      \"recordedAt\": \"2026-04-08T10:00:00Z\"\n    },\n    {\n      \"metricType\": 3,\n      \"value\": 98.5,\n      \"unit\": \"%\",\n      \"recordedAt\": \"2026-04-08T10:00:00Z\"\n    },\n    {\n      \"metricType\": 4,\n      \"value\": 7.5,\n      \"unit\": \"hours\",\n      \"recordedAt\": \"2026-04-08T08:00:00Z\"\n    },\n    {\n      \"metricType\": 10,\n      \"value\": 45,\n      \"unit\": \"ms\",\n      \"recordedAt\": \"2026-04-08T10:00:00Z\"\n    }\n  ]\n}"
-        }
-      }
+      ]
     },
     {
-      "name": "4. Get All Data",
-      "event": [
+      "name": "4 — Retrieve Health Data",
+      "item": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Request succeeded', () => pm.response.to.have.status(200));",
-              "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
-            ],
-            "type": "text/javascript"
+          "name": "4.1 Get All Data",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Request succeeded', () => pm.response.to.have.status(200));",
+                  "var data = pm.response.json();",
+                  "pm.test('Returns array', () => pm.expect(data).to.be.an('array'));",
+                  "pm.test('Results are newest-first', () => {",
+                  "  for (var i = 1; i < data.length; i++) {",
+                  "    pm.expect(new Date(data[i-1].recordedAt) >= new Date(data[i].recordedAt)).to.be.true;",
+                  "  }",
+                  "});",
+                  "pm.test('ExternalId returned where set', () => {",
+                  "  var withId = data.filter(d => d.externalId !== null);",
+                  "  pm.expect(withId.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/health-data"
+          }
+        },
+        {
+          "name": "4.2 Get Heart Rate Only",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Request succeeded', () => pm.response.to.have.status(200));",
+                  "var data = pm.response.json();",
+                  "pm.test('All results are HeartRate (0)', () => {",
+                  "  data.forEach(d => pm.expect(d.metricType).to.equal(0));",
+                  "});",
+                  "pm.test('No duplicate externalIds', () => {",
+                  "  var ids = data.filter(d => d.externalId).map(d => d.externalId);",
+                  "  pm.expect(ids.length).to.equal(new Set(ids).size);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/health-data?metricType=0",
+              "query": [{ "key": "metricType", "value": "0", "description": "0 = HeartRate" }]
+            }
+          }
+        },
+        {
+          "name": "4.3 Get Steps Only",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Request succeeded', () => pm.response.to.have.status(200));",
+                  "var data = pm.response.json();",
+                  "pm.test('All results are Steps (1)', () => {",
+                  "  data.forEach(d => pm.expect(d.metricType).to.equal(1));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/health-data?metricType=1",
+              "query": [{ "key": "metricType", "value": "1", "description": "1 = Steps" }]
+            }
+          }
+        },
+        {
+          "name": "4.4 Get Data in Time Range",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Request succeeded', () => pm.response.to.have.status(200));",
+                  "var data = pm.response.json();",
+                  "var from = new Date('2026-04-09T00:00:00Z');",
+                  "var to = new Date('2026-04-09T23:59:59Z');",
+                  "pm.test('All results fall within time range', () => {",
+                  "  data.forEach(d => {",
+                  "    var t = new Date(d.recordedAt);",
+                  "    pm.expect(t >= from && t <= to).to.be.true;",
+                  "  });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/health-data?from=2026-04-09T00:00:00Z&to=2026-04-09T23:59:59Z",
+              "query": [
+                { "key": "from", "value": "2026-04-09T00:00:00Z" },
+                { "key": "to", "value": "2026-04-09T23:59:59Z" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.5 Get Data Without Token (Expect 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unauthenticated request rejected', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health-data"
           }
         }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-        "url": "{{baseUrl}}/health-data"
-      }
+      ]
     },
     {
-      "name": "5. Get Heart Rate Only",
-      "event": [
+      "name": "5 — Deregistration",
+      "item": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Request succeeded', () => pm.response.to.have.status(200));",
-              "var data = pm.response.json();",
-              "pm.test('All results are heart rate', () => {",
-              "  data.forEach(d => pm.expect(d.metricType).to.equal(0));",
-              "});"
-            ],
-            "type": "text/javascript"
+          "name": "5.1 Deregister Single Device",
+          "description": "Removes the device registration and cascades-deletes all health data associated with that device.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Device deregistered', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/device-registrations/{{deviceId2}}"
+          }
+        },
+        {
+          "name": "5.2 Deregister Unknown Device (Expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unknown device returns 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/device-registrations/unknown-device-999"
+          }
+        },
+        {
+          "name": "5.3 Deregister All Devices for Patient",
+          "description": "Removes all registrations for the patient and cascades-deletes all their health data. Use when a patient withdraws consent entirely.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('All devices deregistered', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/device-registrations?patientIdentifier={{patientIdentifier}}",
+              "query": [{ "key": "patientIdentifier", "value": "{{patientIdentifier}}" }]
+            }
+          }
+        },
+        {
+          "name": "5.4 Deregister All — Unknown Patient (Expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unknown patient returns 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/device-registrations?patientIdentifier=NHS-0000000000",
+              "query": [{ "key": "patientIdentifier", "value": "NHS-0000000000" }]
+            }
           }
         }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-        "url": {
-          "raw": "{{baseUrl}}/health-data?metricType=0",
-          "query": [{ "key": "metricType", "value": "0", "description": "0=HeartRate" }]
-        }
-      }
-    },
-    {
-      "name": "6. Get Data in Time Range",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Request succeeded', () => pm.response.to.have.status(200));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-        "url": {
-          "raw": "{{baseUrl}}/health-data?from=2026-04-08T00:00:00Z&to=2026-04-08T23:59:59Z",
-          "query": [
-            { "key": "from", "value": "2026-04-08T00:00:00Z" },
-            { "key": "to", "value": "2026-04-08T23:59:59Z" }
-          ]
-        }
-      }
-    },
-    {
-      "name": "7. Register Device (Patient Consent)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Device registered', () => pm.response.to.have.status(200));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
-        ],
-        "url": "{{baseUrl}}/device-registrations",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"patientIdentifier\": \"NHS-1234567890\",\n  \"dateOfBirth\": \"1985-06-15\",\n  \"deviceId\": \"iphone-uuid-abc123\"\n}"
-        }
-      }
-    },
-    {
-      "name": "8. Register Same Device Again (Expect 409)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Duplicate rejected', () => pm.response.to.have.status(409));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
-        ],
-        "url": "{{baseUrl}}/device-registrations",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"patientIdentifier\": \"NHS-1234567890\",\n  \"dateOfBirth\": \"1985-06-15\",\n  \"deviceId\": \"iphone-uuid-abc123\"\n}"
-        }
-      }
-    },
-    {
-      "name": "9. Deregister Device (Consent Withdrawn)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Device deregistered', () => pm.response.to.have.status(200));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "DELETE",
-        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-        "url": "{{baseUrl}}/device-registrations/iphone-uuid-abc123"
-      }
-    },
-    {
-      "name": "10. Deregister Unknown Device (Expect 404)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Not found', () => pm.response.to.have.status(404));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "DELETE",
-        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-        "url": "{{baseUrl}}/device-registrations/iphone-uuid-abc123"
-      }
-    },
-    {
-      "name": "11. Reject Unauthenticated Request",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Returns 401 without token', () => pm.response.to.have.status(401));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "{{baseUrl}}/health-data"
-      }
+      ]
     }
   ]
 }
