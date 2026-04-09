@@ -7,7 +7,7 @@ namespace HealthApi.Api.Controllers;
 /// <summary>Device registration — records patient consent to share health data</summary>
 [ApiController]
 [Route("device-registrations")]
-[Authorize]
+[AllowAnonymous]
 public class DeviceRegistrationsController(DeviceRegistrationStorage storage) : ControllerBase
 {
     /// <summary>Register a device for a patient</summary>
