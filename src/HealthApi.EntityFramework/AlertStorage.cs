@@ -13,20 +13,21 @@ public class AlertStorage(HealthApiDbContext db)
             .ToListAsync(ct);
     }
 
-    public async Task CreateAsync(string patientIdentifier, string severity, string message, CancellationToken ct)
+    public async Task<Patient> CreateAsync(string patientIdentifier, string severity, string message, CancellationToken ct)
     {
-        var patientId = await db.Patients
+        var patient = await db.Patients
             .Where(p => p.PatientIdentifier == patientIdentifier)
-            .Select(p => (Guid?)p.Id)
             .FirstOrDefaultAsync(ct)
             ?? throw new InvalidOperationException($"Patient not found: {patientIdentifier}");
 
         db.HealthAlerts.Add(new HealthAlert
         {
-            PatientId = patientId,
+            PatientId = patient.Id,
             Severity = severity,
             Message = message,
         });
         await db.SaveChangesAsync(ct);
+
+        return patient;
     }
 }

@@ -16,6 +16,7 @@ public class HealthMonitoringAgent(
     IHttpClientFactory httpClientFactory,
     HealthDataStorage healthData,
     AlertStorage alerts,
+    PatientInitiatedMessagingClient messagingClient,
     IConfiguration config,
     ILogger<HealthMonitoringAgent> logger)
 {
@@ -254,11 +255,13 @@ public class HealthMonitoringAgent(
         var severity = input["severity"]!.GetValue<string>();
         var message = input["message"]!.GetValue<string>();
 
-        await alerts.CreateAsync(patientIdentifier, severity, message, ct);
+        var patient = await alerts.CreateAsync(patientIdentifier, severity, message, ct);
 
         logger.LogWarning(
             "HEALTH ALERT [{Severity}] patient={PatientIdentifier} — {Message}",
             severity.ToUpper(), patientIdentifier, message);
+
+        await messagingClient.SendAlertAsync(patient, $"[{severity.ToUpper()}] {message}", ct);
 
         return "Alert recorded.";
     }

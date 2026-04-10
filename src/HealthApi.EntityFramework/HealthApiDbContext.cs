@@ -49,6 +49,9 @@ public class HealthApiDbContext(DbContextOptions<HealthApiDbContext> options) : 
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.PatientIdentifier).IsUnique();
             entity.Property(e => e.PatientIdentifier).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Forename).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Surname).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Postcode).HasMaxLength(10).IsRequired();
             entity.Property(e => e.PracticeOdsCode).HasMaxLength(10).IsRequired();
         });
 

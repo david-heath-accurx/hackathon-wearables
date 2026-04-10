@@ -7,7 +7,10 @@ public class DeviceRegistrationStorage(HealthApiDbContext db)
 {
     public async Task<bool> RegisterAsync(
         string patientIdentifier,
+        string forename,
+        string surname,
         DateOnly dateOfBirth,
+        string postcode,
         string practiceOdsCode,
         string deviceId,
         CancellationToken ct)
@@ -23,7 +26,10 @@ public class DeviceRegistrationStorage(HealthApiDbContext db)
             patient = new Patient
             {
                 PatientIdentifier = patientIdentifier,
+                Forename = forename,
+                Surname = surname,
                 DateOfBirth = dateOfBirth,
+                Postcode = postcode,
                 PracticeOdsCode = practiceOdsCode,
             };
             db.Patients.Add(patient);

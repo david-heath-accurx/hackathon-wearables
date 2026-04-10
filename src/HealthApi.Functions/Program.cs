@@ -18,12 +18,20 @@ var host = Host.CreateDefaultBuilder(args)
 
         services.AddScoped<HealthDataStorage>();
         services.AddScoped<AlertStorage>();
+        services.AddScoped<PatientInitiatedMessagingClient>();
         services.AddScoped<HealthMonitoringAgent>();
 
         services.AddHttpClient("anthropic", client =>
         {
             client.BaseAddress = new Uri("https://api.anthropic.com");
             client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+        });
+
+        services.AddHttpClient("patientInitiated", client =>
+        {
+            client.BaseAddress = new Uri(
+                context.Configuration["PatientInitiatedMessaging:BaseUrl"]
+                ?? "https://web.demo.accurx.com");
         });
     })
     .Build();

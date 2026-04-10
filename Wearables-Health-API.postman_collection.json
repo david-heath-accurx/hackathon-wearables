@@ -14,8 +14,20 @@
       "value": "NHS-1234567890"
     },
     {
+      "key": "forename",
+      "value": "John"
+    },
+    {
+      "key": "surname",
+      "value": "Smith"
+    },
+    {
       "key": "dateOfBirth",
       "value": "1985-06-15"
+    },
+    {
+      "key": "postcode",
+      "value": "SW1A 1AA"
     },
     {
       "key": "practiceOdsCode",
@@ -66,7 +78,7 @@
             "url": "{{baseUrl}}/device-registrations",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"practiceOdsCode\": \"{{practiceOdsCode}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"forename\": \"{{forename}}\",\n  \"surname\": \"{{surname}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"postcode\": \"{{postcode}}\",\n  \"practiceOdsCode\": \"{{practiceOdsCode}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
             }
           }
         },
@@ -89,7 +101,7 @@
             "url": "{{baseUrl}}/device-registrations",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"practiceOdsCode\": \"{{practiceOdsCode}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"forename\": \"{{forename}}\",\n  \"surname\": \"{{surname}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"postcode\": \"{{postcode}}\",\n  \"practiceOdsCode\": \"{{practiceOdsCode}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
             }
           }
         },
@@ -112,7 +124,7 @@
             "url": "{{baseUrl}}/device-registrations",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"practiceOdsCode\": \"{{practiceOdsCode}}\",\n  \"deviceId\": \"{{deviceId2}}\"\n}"
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"forename\": \"{{forename}}\",\n  \"surname\": \"{{surname}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"postcode\": \"{{postcode}}\",\n  \"practiceOdsCode\": \"{{practiceOdsCode}}\",\n  \"deviceId\": \"{{deviceId2}}\"\n}"
             }
           }
         }
@@ -583,7 +595,7 @@
             "url": "{{baseUrl}}/device-registrations",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"practiceOdsCode\": \"{{practiceOdsCode}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"forename\": \"{{forename}}\",\n  \"surname\": \"{{surname}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"postcode\": \"{{postcode}}\",\n  \"practiceOdsCode\": \"{{practiceOdsCode}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
             }
           }
         },
@@ -851,7 +863,7 @@
             "url": "{{baseUrl}}/device-registrations",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"practiceOdsCode\": \"{{practiceOdsCode}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"forename\": \"{{forename}}\",\n  \"surname\": \"{{surname}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"postcode\": \"{{postcode}}\",\n  \"practiceOdsCode\": \"{{practiceOdsCode}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
             }
           }
         },
