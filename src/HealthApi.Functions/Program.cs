@@ -31,7 +31,7 @@ var host = Host.CreateDefaultBuilder(args)
         {
             client.BaseAddress = new Uri(
                 context.Configuration["PatientInitiatedMessaging:BaseUrl"]
-                ?? "https://web.demo.accurx.com");
+                ?? "https://web.dev.accurx.com");
         });
     })
     .Build();
