@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json.Nodes;
 using HealthApi.Domain;
 using Microsoft.Extensions.Logging;
 
@@ -6,19 +7,24 @@ namespace HealthApi.Functions;
 
 /// <summary>
 /// Sends a patient-initiated triage request to the practice's Accurx inbox when a health alert is raised.
+/// Form IDs (category, flow, question) are discovered at runtime from the practice's configured form.
 /// </summary>
 public class PatientInitiatedMessagingClient(
     IHttpClientFactory httpClientFactory,
     ILogger<PatientInitiatedMessagingClient> logger)
 {
-    // Hard-coded form identifiers for the health monitoring category on the demo environment
-    private static readonly Guid CategoryId = Guid.Parse("12bd474a-4581-42a3-8b2a-c2237bdabf3b");
-    private static readonly Guid SubcategoryId = Guid.Parse("7638b491-9c20-49d6-a5c2-9cccb158e639");
-    private static readonly Guid QuestionId = Guid.Parse("f588d937-21f1-4b23-a95d-5b37af33f520");
-
     public async Task SendAlertAsync(Patient patient, string alertMessage, CancellationToken ct)
     {
         var http = httpClientFactory.CreateClient("patientInitiated");
+
+        var formIds = await DiscoverFormIdsAsync(http, patient.PracticeOdsCode, ct);
+        if (formIds is null)
+        {
+            logger.LogWarning(
+                "Could not discover form IDs for practice {OdsCode} — skipping patient initiated message",
+                patient.PracticeOdsCode);
+            return;
+        }
 
         var request = new
         {
@@ -33,12 +39,12 @@ public class PatientInitiatedMessagingClient(
             hasProxy = false,
             submission = new
             {
-                categoryId = CategoryId,
-                subcategoryId = SubcategoryId,
+                categoryId = formIds.CategoryId,
+                subcategoryId = formIds.FlowId,
                 attachmentIds = Array.Empty<string>(),
                 questions = new[]
                 {
-                    new { id = QuestionId, answers = new[] { alertMessage } }
+                    new { id = formIds.QuestionId, answers = new[] { alertMessage } }
                 },
                 followUpQuestions = Array.Empty<object>(),
             }
@@ -67,4 +73,96 @@ public class PatientInitiatedMessagingClient(
                 patient.PatientIdentifier);
         }
     }
+
+    /// <summary>
+    /// Calls GET /api/patientinitiated/{odsCode}/forms and picks the first enabled Questions category
+    /// that has a flow containing a free-text question.
+    /// </summary>
+    private async Task<FormIds?> DiscoverFormIdsAsync(HttpClient http, string odsCode, CancellationToken ct)
+    {
+        try
+        {
+            var landingPageUrl = $"{http.BaseAddress}{odsCode}";
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"/api/patientinitiated/{odsCode}/forms?landingPageUrl={Uri.EscapeDataString(landingPageUrl)}");
+            request.Headers.Add("X-Request-Tracking-Id", Guid.NewGuid().ToString());
+
+            var response = await http.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(ct);
+                logger.LogWarning("Forms endpoint returned {Status} for {OdsCode}: {Body}",
+                    (int)response.StatusCode, odsCode, body);
+                return null;
+            }
+
+            var json = await response.Content.ReadFromJsonAsync<JsonNode>(cancellationToken: ct);
+            var sections = json?["sections"]?.AsArray();
+            if (sections is null) return null;
+
+            foreach (var section in sections)
+            {
+                var categories = section?["categories"]?.AsObject();
+                if (categories is null) continue;
+
+                foreach (var categoryProp in categories)
+                {
+                    var category = categoryProp.Value;
+                    if (category?["type"]?.GetValue<string>() != "Questions") continue;
+                    if (category["isEnabled"]?.GetValue<bool>() != true) continue;
+
+                    var categoryId = Guid.Parse(category["id"]!.GetValue<string>());
+                    var flows = category["flows"]?.AsArray();
+                    if (flows is null || flows.Count == 0) continue;
+
+                    foreach (var flow in flows)
+                    {
+                        var flowId = Guid.Parse(flow!["id"]!.GetValue<string>());
+                        var questionId = FindFreeTextQuestionId(flow["pages"]?.AsArray());
+                        if (questionId is null) continue;
+
+                        logger.LogDebug(
+                            "Discovered form IDs for {OdsCode}: category={CategoryId} flow={FlowId} question={QuestionId}",
+                            odsCode, categoryId, flowId, questionId);
+
+                        return new FormIds(categoryId, flowId, questionId.Value);
+                    }
+                }
+            }
+
+            logger.LogWarning("No suitable Questions category with a free-text question found for {OdsCode}", odsCode);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to discover form IDs for practice {OdsCode}", odsCode);
+            return null;
+        }
+    }
+
+    private static Guid? FindFreeTextQuestionId(JsonArray? pages)
+    {
+        if (pages is null) return null;
+
+        foreach (var page in pages)
+        {
+            var blocks = page?["blocks"]?.AsArray();
+            if (blocks is null) continue;
+
+            foreach (var block in blocks)
+            {
+                if (block?["type"]?.GetValue<string>() != "Question") continue;
+
+                var question = block["question"];
+                if (question?["questionType"]?.GetValue<string>() == "FreeText")
+                    return Guid.Parse(question["id"]!.GetValue<string>());
+            }
+        }
+
+        return null;
+    }
+
+    private record FormIds(Guid CategoryId, Guid FlowId, Guid QuestionId);
 }
