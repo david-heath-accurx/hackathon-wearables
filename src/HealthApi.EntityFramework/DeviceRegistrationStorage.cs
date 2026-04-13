@@ -111,4 +111,15 @@ public class DeviceRegistrationStorage(HealthApiDbContext db)
         return db.Patients.FirstOrDefaultAsync(
             p => p.PatientIdentifier == patientIdentifier, ct);
     }
+
+    public Task<Patient?> FindPatientByDemographicsAsync(
+        string forename, string surname, DateOnly dateOfBirth, string odsCode, CancellationToken ct)
+    {
+        return db.Patients.FirstOrDefaultAsync(
+            p => p.Forename == forename
+              && p.Surname == surname
+              && p.DateOfBirth == dateOfBirth
+              && p.PracticeOdsCode == odsCode,
+            ct);
+    }
 }
