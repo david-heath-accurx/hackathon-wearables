@@ -93,7 +93,7 @@ public class PatientInitiatedMessagingClient(
 
     private async Task<FormIds?> DiscoverFormIdsAsync(string odsCode, CancellationToken ct)
     {
-        var http = httpClientFactory.CreateClient("patientInitatedForms");
+        var http = httpClientFactory.CreateClient("patientInitiatedForms");
         try
         {
             var landingPageUrl = $"https://dev.accurx.nhs.uk/{odsCode.ToLower()}";
