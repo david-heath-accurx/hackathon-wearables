@@ -13,30 +13,33 @@ public class AdminHealthAlertsController(AlertStorage alerts, DeviceRegistration
 {
     /// <summary>Retrieve health alerts for a patient</summary>
     /// <remarks>
-    /// Returns all alerts raised by the monitoring agent for the given patient, newest first.
-    /// The patient identifier and date of birth are used to verify the patient is registered.
+    /// Identify the patient either by patientIdentifier + dateOfBirth, or by forename + surname + dateOfBirth + odsCode.
     /// </remarks>
-    /// <param name="patientIdentifier">Unique patient identifier (e.g. NHS number)</param>
-    /// <param name="dateOfBirth">Patient date of birth (YYYY-MM-DD) — used to verify the patient</param>
-    /// <response code="200">List of health alerts, newest first. Empty array if no alerts have been raised.</response>
-    /// <response code="401">Missing or invalid service token</response>
-    /// <response code="404">Patient identifier and date of birth not found</response>
     [HttpGet]
     [ProducesResponseType(typeof(List<HealthAlertDto>), 200)]
     [ProducesResponseType(401)]
     [ProducesResponseType(typeof(string), 404)]
     public async Task<ActionResult<List<HealthAlertDto>>> Get(
-        [FromQuery] string patientIdentifier,
+        [FromQuery] string? patientIdentifier,
+        [FromQuery] string? forename,
+        [FromQuery] string? surname,
         [FromQuery] DateOnly dateOfBirth,
+        [FromQuery] string? odsCode,
         CancellationToken ct
     )
     {
-        var patient = await registrations.FindPatientAsync(patientIdentifier, dateOfBirth, ct);
+        Patient? patient;
+        if (patientIdentifier is not null)
+            patient = await registrations.FindPatientAsync(patientIdentifier, dateOfBirth, ct);
+        else if (forename is not null && surname is not null && odsCode is not null)
+            patient = await registrations.FindPatientByDemographicsAsync(forename, surname, dateOfBirth, odsCode, ct);
+        else
+            return BadRequest("Provide either patientIdentifier or forename + surname + odsCode.");
 
         if (patient is null)
             return NotFound("Patient not found.");
 
-        var results = await alerts.GetAsync(patientIdentifier, ct);
+        var results = await alerts.GetAsync(patient.PatientIdentifier, ct);
 
         return results
             .Select(a => new HealthAlertDto(a.Id, a.Severity, a.Message, a.DetectedAt, a.AcknowledgedAt))
@@ -44,7 +47,6 @@ public class AdminHealthAlertsController(AlertStorage alerts, DeviceRegistration
     }
 }
 
-/// <summary>A health alert raised by the monitoring agent</summary>
 public record HealthAlertDto(
     Guid Id,
     string Severity,
