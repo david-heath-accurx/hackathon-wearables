@@ -42,5 +42,6 @@ public class HealthAlertsController(AlertStorage alerts, DeviceRegistrationStora
 }
 
 /// <summary>Request body for POST /health-alerts</summary>
-/// <param name="Message">Description of the health concern, up to 500 characters</param>
-public record SubmitAlertRequest([MaxLength(500)] string Message);
+/// <param name="Message">Description of the health concern, up to 471 characters</param>
+// Max 471 chars — a 29-char fixed prefix ("Wearable device health alert\n") is prepended before submission, keeping the total under 500.
+public record SubmitAlertRequest([MaxLength(471)] string Message);
