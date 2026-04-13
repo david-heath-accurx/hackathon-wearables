@@ -6,8 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-// Build a minimal host — no Functions runtime needed. The Container Apps Job
-// scheduler handles the cron; this process runs the agent once and exits.
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
     {
@@ -31,6 +29,13 @@ var host = Host.CreateDefaultBuilder(args)
         {
             client.BaseAddress = new Uri(
                 context.Configuration["PatientInitiatedMessaging:BaseUrl"]
+                ?? "https://dev.accurx.nhs.uk");
+        });
+
+        services.AddHttpClient("patientInitiatedForms", client =>
+        {
+            client.BaseAddress = new Uri(
+                context.Configuration["PatientInitiatedMessaging:FormsBaseUrl"]
                 ?? "https://web.dev.accurx.com");
         });
     })
