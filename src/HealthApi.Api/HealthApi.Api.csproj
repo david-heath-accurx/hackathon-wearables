@@ -25,6 +25,7 @@
   <ItemGroup>
     <ProjectReference Include="..\HealthApi.Domain\HealthApi.Domain.csproj" />
     <ProjectReference Include="..\HealthApi.EntityFramework\HealthApi.EntityFramework.csproj" />
+    <ProjectReference Include="..\HealthApi.Functions\HealthApi.Functions.csproj" />
   </ItemGroup>
 
 </Project>
