@@ -2,6 +2,7 @@ using System.Reflection;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using HealthApi.EntityFramework;
+using HealthApi.Functions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -49,6 +50,21 @@ builder.Services.AddDbContext<HealthApiDbContext>(options =>
 builder.Services.AddScoped<HealthDataStorage>();
 builder.Services.AddScoped<DeviceRegistrationStorage>();
 builder.Services.AddScoped<AlertStorage>();
+builder.Services.AddScoped<PatientInitiatedMessagingClient>();
+
+builder.Services.AddHttpClient("patientInitiated", client =>
+{
+    client.BaseAddress = new Uri(
+        builder.Configuration["PatientInitiatedMessaging:BaseUrl"]
+        ?? "https://dev.accurx.nhs.uk");
+});
+
+builder.Services.AddHttpClient("patientInitiatedForms", client =>
+{
+    client.BaseAddress = new Uri(
+        builder.Configuration["PatientInitiatedMessaging:FormsBaseUrl"]
+        ?? "https://florey.dev.accurx.com");
+});
 
 var signingKey = new SymmetricSecurityKey(
     Convert.FromBase64String(builder.Configuration["Auth:SigningKey"]!)
