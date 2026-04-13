@@ -11,50 +11,43 @@ namespace HealthApi.Api.Controllers;
 [Authorize(Policy = "ServiceKey")]
 public class AdminHealthDataController(HealthDataStorage storage, DeviceRegistrationStorage registrations) : ControllerBase
 {
-    /// <summary>Retrieve health data for a patient by identifier and date of birth</summary>
+    /// <summary>Retrieve health data for a patient</summary>
     /// <remarks>
-    /// Authenticates via a JWT signed with the service signing key stored in Azure Key Vault.
-    /// The patient identifier and date of birth are used to verify the patient is registered
-    /// before returning their data. All query filters are optional.
+    /// Identify the patient either by patientIdentifier + dateOfBirth, or by forename + surname + dateOfBirth + odsCode.
     /// </remarks>
-    /// <param name="patientIdentifier">Unique patient identifier (e.g. NHS number)</param>
-    /// <param name="dateOfBirth">Patient date of birth (YYYY-MM-DD) — used to verify the patient</param>
-    /// <param name="metricType">Filter by metric type (see POST /health-data for values)</param>
-    /// <param name="from">Start of time range (inclusive, ISO 8601)</param>
-    /// <param name="to">End of time range (inclusive, ISO 8601)</param>
-    /// <response code="200">Health data for the patient. Empty array if the patient is registered but has no active devices or data.</response>
-    /// <response code="401">Missing or invalid service token</response>
-    /// <response code="404">Patient identifier and date of birth not found</response>
     [HttpGet]
     [ProducesResponseType(typeof(List<HealthDataPointDto>), 200)]
     [ProducesResponseType(401)]
     [ProducesResponseType(typeof(string), 404)]
     public async Task<ActionResult<List<HealthDataPointDto>>> Get(
-        [FromQuery] string patientIdentifier,
+        [FromQuery] string? patientIdentifier,
+        [FromQuery] string? forename,
+        [FromQuery] string? surname,
         [FromQuery] DateOnly dateOfBirth,
+        [FromQuery] string? odsCode,
         [FromQuery] HealthMetricType? metricType,
         [FromQuery] DateTimeOffset? from,
         [FromQuery] DateTimeOffset? to,
         CancellationToken ct
     )
     {
-        var patient = await registrations.FindPatientAsync(patientIdentifier, dateOfBirth, ct);
+        Patient? patient;
+        if (patientIdentifier is not null)
+            patient = await registrations.FindPatientAsync(patientIdentifier, dateOfBirth, ct);
+        else if (forename is not null && surname is not null && odsCode is not null)
+            patient = await registrations.FindPatientByDemographicsAsync(forename, surname, dateOfBirth, odsCode, ct);
+        else
+            return BadRequest("Provide either patientIdentifier or forename + surname + odsCode.");
 
         if (patient is null)
             return NotFound("Patient not found.");
 
-        var results = await storage.GetAsync(patientIdentifier, metricType, from, to, ct);
+        var results = await storage.GetAsync(patient.PatientIdentifier, metricType, from, to, ct);
 
         return results
             .Select(p => new HealthDataPointDto(
-                p.Id,
-                p.MetricType,
-                p.MetricTypeName,
-                p.Value,
-                p.Unit,
-                p.RecordedAt,
-                p.DeviceRegistration.DeviceModel,
-                p.ExternalId
+                p.Id, p.MetricType, p.MetricTypeName, p.Value, p.Unit,
+                p.RecordedAt, p.DeviceRegistration.DeviceModel, p.ExternalId
             ))
             .ToList();
     }
