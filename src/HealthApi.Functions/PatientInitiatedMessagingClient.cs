@@ -5,19 +5,13 @@ using Microsoft.Extensions.Logging;
 
 namespace HealthApi.Functions;
 
-/// <summary>
-/// Sends a patient-initiated triage request to the practice's Accurx inbox when a health alert is raised.
-/// Form IDs (category, flow, question) are discovered at runtime from the practice's configured form.
-/// </summary>
 public class PatientInitiatedMessagingClient(
     IHttpClientFactory httpClientFactory,
     ILogger<PatientInitiatedMessagingClient> logger)
 {
     public async Task SendAlertAsync(Patient patient, string alertMessage, CancellationToken ct)
     {
-        var http = httpClientFactory.CreateClient("patientInitiated");
-
-        var formIds = await DiscoverFormIdsAsync(http, patient.PracticeOdsCode, ct);
+        var formIds = await DiscoverFormIdsAsync(patient.PracticeOdsCode, ct);
         if (formIds is null)
         {
             logger.LogWarning(
@@ -26,21 +20,39 @@ public class PatientInitiatedMessagingClient(
             return;
         }
 
+        var http = httpClientFactory.CreateClient("patientInitiated");
+
         var request = new
         {
             requestTrackingId = Guid.NewGuid(),
-            patientInitiatedIdentifier = patient.PracticeOdsCode,
+            patientInitiatedIdentifier = patient.PracticeOdsCode.ToLower(),
             patientSurname = patient.Surname,
             patientForename = patient.Forename,
             patientDateOfBirthDay = patient.DateOfBirth.Day,
             patientDateOfBirthMonth = patient.DateOfBirth.Month,
             patientDateOfBirthYear = patient.DateOfBirth.Year,
             patientPostcode = patient.Postcode,
+            patientPhoneNumber = "",
             hasProxy = false,
+            sendConfirmationMessage = false,
+            contactByPhone = false,
+            contactBySms = false,
+            preferredContactNumber = "",
+            patientContactDetails = new { emailAddress = "", phoneNumber = "" },
+            contactPreferences = new { contactViaSms = false, contactViaPhone = false, contactViaEmail = false },
+            proxyFlowInformation = (object?)null,
+            clinicianName = "",
+            clinicianAppId = "",
+            receptionDataToken = "",
+            isDirectLinkSubmission = false,
+            nhsLoginType = (string?)null,
+            isOutOfHours = false,
+            patientMobileAuthResult = "",
+            verification = (object?)null,
             submission = new
             {
                 categoryId = formIds.CategoryId,
-                subcategoryId = formIds.FlowId,
+                subcategoryId = formIds.SubcategoryId,
                 attachmentIds = Array.Empty<string>(),
                 questions = new[]
                 {
@@ -74,22 +86,19 @@ public class PatientInitiatedMessagingClient(
         }
     }
 
-    /// <summary>
-    /// Calls GET /api/patientinitiated/{odsCode}/forms and picks the first enabled Questions category
-    /// that has a flow containing a free-text question.
-    /// </summary>
-    private async Task<FormIds?> DiscoverFormIdsAsync(HttpClient http, string odsCode, CancellationToken ct)
+    private async Task<FormIds?> DiscoverFormIdsAsync(string odsCode, CancellationToken ct)
     {
+        var http = httpClientFactory.CreateClient("patientInitiatedForms");
         try
         {
-            var landingPageUrl = $"{http.BaseAddress}{odsCode}";
+            var landingPageUrl = $"https://dev.accurx.nhs.uk/{odsCode.ToLower()}";
 
-            using var request = new HttpRequestMessage(
+            using var req = new HttpRequestMessage(
                 HttpMethod.Get,
                 $"/api/patientinitiated/{odsCode}/forms?landingPageUrl={Uri.EscapeDataString(landingPageUrl)}");
-            request.Headers.Add("X-Request-Tracking-Id", Guid.NewGuid().ToString());
+            req.Headers.Add("X-Request-Tracking-Id", Guid.NewGuid().ToString());
 
-            var response = await http.SendAsync(request, ct);
+            var response = await http.SendAsync(req, ct);
             if (!response.IsSuccessStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync(ct);
@@ -123,8 +132,8 @@ public class PatientInitiatedMessagingClient(
                         var questionId = FindFreeTextQuestionId(flow["pages"]?.AsArray());
                         if (questionId is null) continue;
 
-                        logger.LogDebug(
-                            "Discovered form IDs for {OdsCode}: category={CategoryId} flow={FlowId} question={QuestionId}",
+                        logger.LogInformation(
+                            "Discovered form IDs for {OdsCode}: category={CategoryId} subcategory={FlowId} question={QuestionId}",
                             odsCode, categoryId, flowId, questionId);
 
                         return new FormIds(categoryId, flowId, questionId.Value);
@@ -164,5 +173,5 @@ public class PatientInitiatedMessagingClient(
         return null;
     }
 
-    private record FormIds(Guid CategoryId, Guid FlowId, Guid QuestionId);
+    private record FormIds(Guid CategoryId, Guid SubcategoryId, Guid QuestionId);
 }
