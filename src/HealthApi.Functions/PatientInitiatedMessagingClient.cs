@@ -22,6 +22,11 @@ public class PatientInitiatedMessagingClient(
 
         var http = httpClientFactory.CreateClient("patientInitiated");
 
+        const string prefix = "Wearable device health alert\n";
+        var fullMessage = (prefix + alertMessage).Length <= 500
+            ? prefix + alertMessage
+            : (prefix + alertMessage)[..500];
+
         var request = new
         {
             requestTrackingId = Guid.NewGuid(),
@@ -56,7 +61,7 @@ public class PatientInitiatedMessagingClient(
                 attachmentIds = Array.Empty<string>(),
                 questions = new[]
                 {
-                    new { id = formIds.QuestionId, answers = new[] { alertMessage } }
+                    new { id = formIds.QuestionId, answers = new[] { fullMessage } }
                 },
                 followUpQuestions = Array.Empty<object>(),
             }
@@ -88,7 +93,7 @@ public class PatientInitiatedMessagingClient(
 
     private async Task<FormIds?> DiscoverFormIdsAsync(string odsCode, CancellationToken ct)
     {
-        var http = httpClientFactory.CreateClient("patientInitiatedForms");
+        var http = httpClientFactory.CreateClient("patientInitatedForms");
         try
         {
             var landingPageUrl = $"https://dev.accurx.nhs.uk/{odsCode.ToLower()}";
