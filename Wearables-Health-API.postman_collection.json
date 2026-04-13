@@ -11,35 +11,35 @@
     },
     {
       "key": "patientIdentifier",
-      "value": "NHS-1234567890"
+      "value": "NHS-F00027-TEST-001"
     },
     {
       "key": "forename",
-      "value": "John"
+      "value": "Jane"
     },
     {
       "key": "surname",
-      "value": "Smith"
+      "value": "Doe"
     },
     {
       "key": "dateOfBirth",
-      "value": "1985-06-15"
+      "value": "1990-03-15"
     },
     {
       "key": "postcode",
-      "value": "SW1A 1AA"
+      "value": "E1 6RF"
     },
     {
       "key": "practiceOdsCode",
-      "value": "A81001"
+      "value": "F00027"
     },
     {
       "key": "deviceId",
-      "value": "iphone-uuid-abc123"
+      "value": "iphone-f00027-test-001"
     },
     {
       "key": "deviceId2",
-      "value": "iphone-uuid-def456"
+      "value": "iphone-f00027-test-002"
     },
     {
       "key": "accessToken",
