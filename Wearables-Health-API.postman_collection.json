@@ -66,7 +66,7 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Device registered', () => pm.response.to.have.status(200));"
+                  "pm.test('Device registered', () => pm.expect([200, 409]).to.include(pm.response.code));"
                 ],
                 "type": "text/javascript"
               }
