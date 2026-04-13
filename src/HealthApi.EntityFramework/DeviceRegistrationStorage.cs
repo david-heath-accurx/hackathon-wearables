@@ -105,4 +105,10 @@ public class DeviceRegistrationStorage(HealthApiDbContext db)
 
         return deleted > 0;
     }
+
+    public Task<Patient?> FindPatientByIdentifierAsync(string patientIdentifier, CancellationToken ct)
+    {
+        return db.Patients.FirstOrDefaultAsync(
+            p => p.PatientIdentifier == patientIdentifier, ct);
+    }
 }
