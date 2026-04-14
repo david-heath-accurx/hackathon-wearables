@@ -1,13 +1,12 @@
 using HealthApi.EntityFramework;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HealthApi.Api.Controllers;
 
-/// <summary>Admin patient lookup — service-to-service, authenticated via Key Vault signing key</summary>
+/// <summary>Admin patient lookup — service-to-service, authenticated via API key</summary>
 [ApiController]
 [Route("admin/patients")]
-[Authorize(Policy = "ServiceKey")]
+[ServiceFilter(typeof(ApiKeyAuthFilter))]
 public class AdminPatientsController(DeviceRegistrationStorage registrations) : ControllerBase
 {
     /// <summary>Look up patients by forename, surname and date of birth</summary>
@@ -16,7 +15,7 @@ public class AdminPatientsController(DeviceRegistrationStorage registrations) : 
     /// patientIdentifier to query health data or alerts via the other admin endpoints.
     /// </remarks>
     /// <response code="200">List of matching patients (may be empty)</response>
-    /// <response code="401">Missing or invalid service token</response>
+    /// <response code="401">Missing or invalid API key</response>
     [HttpGet]
     [ProducesResponseType(typeof(List<PatientSummaryDto>), 200)]
     [ProducesResponseType(401)]
