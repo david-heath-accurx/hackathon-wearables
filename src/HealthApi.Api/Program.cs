@@ -1,6 +1,7 @@
 using System.Reflection;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
+using HealthApi.Api;
 using HealthApi.EntityFramework;
 using HealthApi.Functions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
