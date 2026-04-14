@@ -33,9 +33,9 @@ public class HealthAlertsController(AlertStorage alerts, DeviceRegistrationStora
         if (patient is null)
             return NotFound("Patient registration not found.");
 
-        await alerts.CreateAsync(patientIdentifier, "manual", request.Message, ct);
+        await alerts.CreateAsync(patientIdentifier, request.Severity, request.Message, ct);
 
-        await messaging.SendAlertAsync(patient, request.Message, ct);
+        await messaging.SendAlertAsync(patient, request.Severity, request.Message, ct);
 
         return Ok();
     }
@@ -44,4 +44,4 @@ public class HealthAlertsController(AlertStorage alerts, DeviceRegistrationStora
 /// <summary>Request body for POST /health-alerts</summary>
 /// <param name="Message">Description of the health concern, up to 471 characters</param>
 // Max 471 chars — a 29-char fixed prefix ("Wearable device health alert\n") is prepended before submission, keeping the total under 500.
-public record SubmitAlertRequest([MaxLength(471)] string Message);
+public record SubmitAlertRequest([MaxLength(471)] string Message, string Severity = "manual");
