@@ -132,4 +132,17 @@ public class DeviceRegistrationStorage(HealthApiDbContext db)
                      && p.DateOfBirth == dateOfBirth)
             .ToListAsync(ct);
     }
+
+    // Returns the patientIdentifier for the matching registration, or null if not found.
+    public Task<string?> GetPatientIdentifierAsync(
+        string forename, string surname, DateOnly dateOfBirth, string deviceId, CancellationToken ct)
+    {
+        return db.DeviceRegistrations
+            .Where(r => r.DeviceId == deviceId
+                     && r.Patient.Forename == forename
+                     && r.Patient.Surname == surname
+                     && r.Patient.DateOfBirth == dateOfBirth)
+            .Select(r => r.Patient.PatientIdentifier)
+            .FirstOrDefaultAsync(ct);
+    }
 }
