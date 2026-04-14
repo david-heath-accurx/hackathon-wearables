@@ -1,14 +1,13 @@
 using HealthApi.Domain;
 using HealthApi.EntityFramework;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HealthApi.Api.Controllers;
 
-/// <summary>Admin health data access — service-to-service, authenticated via Key Vault signing key</summary>
+/// <summary>Admin health data access — service-to-service, authenticated via API key</summary>
 [ApiController]
 [Route("admin/health-data")]
-[Authorize(Policy = "ServiceKey")]
+[ServiceFilter(typeof(ApiKeyAuthFilter))]
 public class AdminHealthDataController(HealthDataStorage storage, DeviceRegistrationStorage registrations) : ControllerBase
 {
     /// <summary>Retrieve health data for a patient</summary>
