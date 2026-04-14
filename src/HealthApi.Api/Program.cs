@@ -51,6 +51,7 @@ builder.Services.AddScoped<HealthDataStorage>();
 builder.Services.AddScoped<DeviceRegistrationStorage>();
 builder.Services.AddScoped<AlertStorage>();
 builder.Services.AddScoped<PatientInitiatedMessagingClient>();
+builder.Services.AddScoped<ApiKeyAuthFilter>();
 
 builder.Services.AddHttpClient("patientInitiated", client =>
 {
@@ -70,15 +71,6 @@ var signingKey = new SymmetricSecurityKey(
     Convert.FromBase64String(builder.Configuration["Auth:SigningKey"]!)
 );
 
-var secretClient = new SecretClient(
-    new Uri(builder.Configuration["KeyVault:Uri"]!),
-    new DefaultAzureCredential()
-);
-var serviceKeySecret = await secretClient.GetSecretAsync("service-signing-key");
-var serviceSigningKey = new SymmetricSecurityKey(
-    Convert.FromBase64String(serviceKeySecret.Value.Value)
-);
-
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -93,26 +85,7 @@ builder.Services
             IssuerSigningKey = signingKey,
             ValidateLifetime = true,
         };
-    })
-    .AddJwtBearer("ServiceKey", options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = builder.Configuration["Auth:ServiceIssuer"],
-            ValidateAudience = true,
-            ValidAudience = builder.Configuration["Auth:ServiceAudience"],
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = serviceSigningKey,
-            ValidateLifetime = true,
-        };
     });
-
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("ServiceKey", policy =>
-        policy.AddAuthenticationSchemes("ServiceKey").RequireAuthenticatedUser());
-});
 
 var app = builder.Build();
 
