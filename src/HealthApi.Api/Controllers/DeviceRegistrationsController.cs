@@ -25,12 +25,16 @@ public class DeviceRegistrationsController(DeviceRegistrationStorage storage) : 
         CancellationToken ct
     )
     {
-        var registered = await storage.RegisterAsync(request.PatientIdentifier, request.Forename, request.Surname, request.DateOfBirth, request.Postcode, request.PracticeOdsCode, request.DeviceId, ct);
+        var patientIdentifier = string.IsNullOrWhiteSpace(request.PatientIdentifier)
+            ? Guid.NewGuid().ToString()
+            : request.PatientIdentifier;
+
+        var registered = await storage.RegisterAsync(patientIdentifier, request.Forename, request.Surname, request.DateOfBirth, request.Postcode, request.PracticeOdsCode, request.DeviceId, ct);
 
         if (!registered)
             return Conflict("This device is already registered.");
 
-        return Ok();
+        return Ok(new { patientIdentifier });
     }
 
     /// <summary>Deregister a single device</summary>
@@ -85,11 +89,11 @@ public class DeviceRegistrationsController(DeviceRegistrationStorage storage) : 
 }
 
 /// <summary>Request body for POST /device-registrations</summary>
-/// <param name="PatientIdentifier">Unique patient identifier, up to 100 characters (e.g. NHS number)</param>
+/// <param name="PatientIdentifier">Unique patient identifier, up to 100 characters (e.g. NHS number). If omitted, a UUID will be generated and returned in the response.</param>
 /// <param name="Forename">Patient first name</param>
 /// <param name="Surname">Patient last name</param>
 /// <param name="DateOfBirth">Patient date of birth (YYYY-MM-DD)</param>
 /// <param name="Postcode">Patient's home postcode</param>
 /// <param name="PracticeOdsCode">ODS code of the patient's registered GP practice (e.g. "A81001")</param>
 /// <param name="DeviceId">Unique identifier for the patient's mobile device</param>
-public record RegisterDeviceRequest(string PatientIdentifier, string Forename, string Surname, DateOnly DateOfBirth, string Postcode, string PracticeOdsCode, string DeviceId);
+public record RegisterDeviceRequest(string? PatientIdentifier, string Forename, string Surname, DateOnly DateOfBirth, string Postcode, string PracticeOdsCode, string DeviceId);
