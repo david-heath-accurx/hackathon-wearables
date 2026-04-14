@@ -9,7 +9,7 @@ public class PatientInitiatedMessagingClient(
     IHttpClientFactory httpClientFactory,
     ILogger<PatientInitiatedMessagingClient> logger)
 {
-    public async Task SendAlertAsync(Patient patient, string alertMessage, CancellationToken ct)
+    public async Task SendAlertAsync(Patient patient, string severity, string alertMessage, CancellationToken ct)
     {
         var formIds = await DiscoverFormIdsAsync(patient.PracticeOdsCode, ct);
         if (formIds is null)
@@ -22,7 +22,7 @@ public class PatientInitiatedMessagingClient(
 
         var http = httpClientFactory.CreateClient("patientInitiated");
 
-        const string prefix = "Wearable device health alert\n";
+        var prefix = $"Wearable device health alert\nSeverity: {severity}\n";
         var fullMessage = (prefix + alertMessage).Length <= 500
             ? prefix + alertMessage
             : (prefix + alertMessage)[..500];
