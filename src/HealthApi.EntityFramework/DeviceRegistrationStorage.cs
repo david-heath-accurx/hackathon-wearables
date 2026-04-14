@@ -122,4 +122,14 @@ public class DeviceRegistrationStorage(HealthApiDbContext db)
               && p.PracticeOdsCode == odsCode,
             ct);
     }
+
+    public Task<List<Patient>> FindPatientsByNameAndDobAsync(
+        string forename, string surname, DateOnly dateOfBirth, CancellationToken ct)
+    {
+        return db.Patients
+            .Where(p => p.Forename == forename
+                     && p.Surname == surname
+                     && p.DateOfBirth == dateOfBirth)
+            .ToListAsync(ct);
+    }
 }
