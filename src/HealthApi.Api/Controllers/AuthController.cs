@@ -15,7 +15,7 @@ public class AuthController(IConfiguration config, DeviceRegistrationStorage sto
 {
     /// <summary>Get an access token</summary>
     /// <remarks>
-    /// Validates that the device ID, patient identifier, and date of birth match an active registration.
+    /// Validates that the device ID, patient name, and date of birth match an active registration.
     /// Returns a signed JWT valid for 1 hour. Use it as a Bearer token on all other endpoints.
     /// </remarks>
     /// <response code="200">JWT access token</response>
@@ -28,14 +28,15 @@ public class AuthController(IConfiguration config, DeviceRegistrationStorage sto
         CancellationToken ct
     )
     {
-        var isRegistered = await storage.IsRegisteredAsync(
-            request.PatientIdentifier,
+        var patientIdentifier = await storage.GetPatientIdentifierAsync(
+            request.Forename,
+            request.Surname,
             request.DateOfBirth,
             request.DeviceId,
             ct
         );
 
-        if (!isRegistered)
+        if (patientIdentifier is null)
             return Unauthorized("Device and patient registration not found.");
 
         var signingKey = new SymmetricSecurityKey(
@@ -46,7 +47,7 @@ public class AuthController(IConfiguration config, DeviceRegistrationStorage sto
             issuer: config["Auth:Issuer"],
             audience: config["Auth:Audience"],
             claims: [
-                new Claim(JwtRegisteredClaimNames.Sub, request.PatientIdentifier),
+                new Claim(JwtRegisteredClaimNames.Sub, patientIdentifier),
                 new Claim("deviceId", request.DeviceId),
             ],
             expires: DateTime.UtcNow.AddHours(1),
@@ -62,10 +63,11 @@ public class AuthController(IConfiguration config, DeviceRegistrationStorage sto
 }
 
 /// <summary>Request body for POST /auth/token</summary>
-/// <param name="PatientIdentifier">Unique patient identifier (e.g. NHS number)</param>
+/// <param name="Forename">Patient first name</param>
+/// <param name="Surname">Patient last name</param>
 /// <param name="DateOfBirth">Patient date of birth (YYYY-MM-DD)</param>
 /// <param name="DeviceId">Unique identifier for the patient's mobile device</param>
-public record TokenRequest(string PatientIdentifier, DateOnly DateOfBirth, string DeviceId);
+public record TokenRequest(string Forename, string Surname, DateOnly DateOfBirth, string DeviceId);
 
 /// <summary>JWT token response</summary>
 public record TokenResponse(
