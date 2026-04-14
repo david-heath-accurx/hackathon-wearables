@@ -1,14 +1,13 @@
 using HealthApi.Domain;
 using HealthApi.EntityFramework;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HealthApi.Api.Controllers;
 
-/// <summary>Admin health alert access — service-to-service, authenticated via Key Vault signing key</summary>
+/// <summary>Admin health alert access — service-to-service, authenticated via API key</summary>
 [ApiController]
 [Route("admin/health-alerts")]
-[Authorize(Policy = "ServiceKey")]
+[ServiceFilter(typeof(ApiKeyAuthFilter))]
 public class AdminHealthAlertsController(AlertStorage alerts, DeviceRegistrationStorage registrations) : ControllerBase
 {
     /// <summary>Retrieve health alerts for a patient</summary>
