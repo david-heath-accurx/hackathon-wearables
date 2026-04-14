@@ -177,12 +177,12 @@
             "url": "{{baseUrl}}/auth/token",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+              "raw": "{\n  \"forename\": \"{{forename}}\",\n  \"surname\": \"{{surname}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
             }
           }
         },
         {
-          "name": "2.2 Get Token — Wrong Date of Birth (Expect 401)",
+          "name": "2.2 Get Token — Wrong Forename (Expect 401)",
           "event": [
             {
               "listen": "test",
@@ -205,7 +205,7 @@
             "url": "{{baseUrl}}/auth/token",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"1999-01-01\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+              "raw": "{\n  \"forename\": \"Wrong\",\n  \"surname\": \"{{surname}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
             }
           }
         },
@@ -233,7 +233,7 @@
             "url": "{{baseUrl}}/auth/token",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"unknown-device-999\"\n}"
+              "raw": "{\n  \"forename\": \"{{forename}}\",\n  \"surname\": \"{{surname}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"unknown-device-999\"\n}"
             }
           }
         }
@@ -1031,7 +1031,7 @@
             "url": "{{baseUrl}}/auth/token",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+              "raw": "{\n  \"forename\": \"{{forename}}\",\n  \"surname\": \"{{surname}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
             }
           }
         },
@@ -1257,7 +1257,7 @@
             "url": "{{baseUrl}}/auth/token",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientIdentifier\": \"{{patientIdentifier}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+              "raw": "{\n  \"forename\": \"{{forename}}\",\n  \"surname\": \"{{surname}}\",\n  \"dateOfBirth\": \"{{dateOfBirth}}\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
             }
           }
         },
