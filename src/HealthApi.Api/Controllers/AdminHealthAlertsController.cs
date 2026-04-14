@@ -40,9 +40,16 @@ public class AdminHealthAlertsController(AlertStorage alerts, DeviceRegistration
         }
         else if (forename is not null && surname is not null)
         {
-            var patients = odsCode is not null
-                ? [await registrations.FindPatientByDemographicsAsync(forename, surname, dateOfBirth, odsCode, ct)]
-                : await registrations.FindPatientsByNameAndDobAsync(forename, surname, dateOfBirth, ct);
+            List<Patient?> patients;
+            if (odsCode is not null)
+            {
+                var single = await registrations.FindPatientByDemographicsAsync(forename, surname, dateOfBirth, odsCode, ct);
+                patients = [single];
+            }
+            else
+            {
+                patients = await registrations.FindPatientsByNameAndDobAsync(forename, surname, dateOfBirth, ct);
+            }
 
             identifiers = patients.Where(p => p is not null).Select(p => p!.PatientIdentifier).ToList();
             if (identifiers.Count == 0) return NotFound("Patient not found.");
