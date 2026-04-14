@@ -261,7 +261,7 @@ public class HealthMonitoringAgent(
             "HEALTH ALERT [{Severity}] patient={PatientIdentifier} — {Message}",
             severity.ToUpper(), patientIdentifier, message);
 
-        await messagingClient.SendAlertAsync(patient, $"[{severity.ToUpper()}] {message}", ct);
+        await messagingClient.SendAlertAsync(patient, severity, message, ct);
 
         return "Alert recorded.";
     }
