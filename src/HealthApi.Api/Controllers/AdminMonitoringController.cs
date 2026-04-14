@@ -1,14 +1,13 @@
 using Azure.Core;
 using Azure.Identity;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HealthApi.Api.Controllers;
 
-/// <summary>Admin monitoring controls — service-to-service, authenticated via Key Vault signing key</summary>
+/// <summary>Admin monitoring controls — service-to-service, authenticated via API key</summary>
 [ApiController]
 [Route("admin/monitoring")]
-[Authorize(Policy = "ServiceKey")]
+[ServiceFilter(typeof(ApiKeyAuthFilter))]
 public class AdminMonitoringController(IConfiguration config, HttpClient httpClient) : ControllerBase
 {
     /// <summary>Trigger the health monitoring job immediately</summary>
@@ -17,7 +16,7 @@ public class AdminMonitoringController(IConfiguration config, HttpClient httpCli
     /// scheduled run. Useful for testing alert detection immediately after submitting data.
     /// </remarks>
     /// <response code="200">Job execution started</response>
-    /// <response code="401">Missing or invalid service token</response>
+    /// <response code="401">Missing or invalid API key</response>
     [HttpPost("trigger")]
     [ProducesResponseType(200)]
     [ProducesResponseType(401)]
